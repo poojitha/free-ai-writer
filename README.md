@@ -61,9 +61,13 @@ Open the **Settings** tab to change:
 |-------------|--------------------------|
 | Ollama host | `http://localhost:11434` |
 | Model       | `llama3.1:8b`            |
-| Prompt      | Instructions to fix grammar, clarity, and flow while preserving meaning |
+| Prompt      | See below                |
 
-Settings are saved automatically and persist across restarts.
+The default prompt is:
+
+> Improve the writing quality of the following text. Fix grammar, clarity, and flow, but preserve the original meaning. Return only the improved text, with no preamble or explanation.
+
+Your text is appended after the prompt, following a `Text:` line. Settings are saved automatically and persist across restarts. These defaults are defined in `app.go`.
 
 ## Project structure
 
