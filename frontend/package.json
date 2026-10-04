@@ -1,0 +1,23 @@
+{
+  "name": "write-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node ./scripts/copyTinymce.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tinymce": "^8.8.2",
+    "@tinymce/tinymce-react": "^6.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.0",
+    "fs-extra": "^11.3.0",
+    "vite": "^8.0.9"
+  }
+}

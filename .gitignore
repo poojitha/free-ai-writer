@@ -1,0 +1,18 @@
+# Build output
+build/bin/
+*.exe
+*.exe~
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/package.json.md5
+
+# TinyMCE assets copied by `npm install` (scripts/copyTinymce.mjs)
+frontend/public/tinymce/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

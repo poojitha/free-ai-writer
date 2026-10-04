@@ -1,0 +1,115 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.editor-column {
+  flex: 0 0 80%;
+  max-width: 80%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.side-column {
+  flex: 0 0 20%;
+  max-width: 20%;
+  height: 100%;
+  box-sizing: border-box;
+  background: #f4f4f4;
+  border-left: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  flex: 0 0 auto;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+  border-bottom: 2px solid #333;
+  font-weight: 600;
+}
+
+.tab-panel {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.improve-button {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.improve-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.improve-error {
+  margin-top: 12px;
+  color: #b00020;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.improve-result {
+  margin-top: 12px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.settings-label {
+  display: block;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 14px;
+}
+
+.settings-input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.settings-textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.editor-column .tox-tinymce {
+  height: 100% !important;
+  width: 100% !important;
+}
