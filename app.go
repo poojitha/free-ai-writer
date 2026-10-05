@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -122,7 +123,29 @@ func (a *App) ImproveText(text, host, model, prompt string) (string, error) {
 		return "", err
 	}
 
-	return strings.TrimSpace(result.Response), nil
+	improved := cleanResponse(result.Response)
+	if improved == "" {
+		return "", fmt.Errorf("ollama returned an empty response")
+	}
+	return improved, nil
+}
+
+// preamblePattern matches a lead-in line such as "Here is the improved
+// text:" or "Sure! Here's a revised version:" that models add despite being
+// told not to.
+var preamblePattern = regexp.MustCompile(
+	`(?i)^(?:(?:sure|certainly|okay|ok|of course)[!,.]?\s*)?here(?:'s| is| are)\b[^\n]*:[ \t]*\n`)
+
+// cleanResponse trims the model's reply and strips a leading preamble line
+// and any quotes wrapping the whole result.
+func cleanResponse(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimSpace(preamblePattern.ReplaceAllString(s+"\n", ""))
+	if len(s) >= 2 && strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) &&
+		!strings.Contains(s[1:len(s)-1], `"`) {
+		s = strings.TrimSpace(s[1 : len(s)-1])
+	}
+	return s
 }
 
 const returnOnly = " Return only the rewritten text, with no preamble or explanation."

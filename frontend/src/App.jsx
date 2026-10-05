@@ -117,20 +117,38 @@ function getLineBeforeCaret(editor) {
   return text ? { text, range: before } : null
 }
 
-// The selection if there is one, otherwise the whole block the caret is in.
+const TEXT_BLOCKS = 'p,h1,h2,h3,h4,h5,h6,li,pre,blockquote'
+
+// The selection if there is one. Otherwise the block the caret is in, or —
+// when that's empty (e.g. right after pressing Enter) or the caret isn't in
+// the editor — the nearest block with text before it.
 function getActionTarget(editor) {
+  const body = editor.getBody()
   const rng = editor.selection.getRng()
-  if (!rng.collapsed) {
+  const caretInEditor = body.contains(rng.startContainer)
+
+  if (caretInEditor && !rng.collapsed) {
     const text = editor.selection.getContent({ format: 'text' }).trim()
     if (text) return { text, range: rng.cloneRange() }
   }
 
-  const block = editor.dom.getParent(rng.startContainer, editor.dom.isBlock, editor.getBody())
-  if (!block) return null
-  const range = editor.getDoc().createRange()
-  range.selectNodeContents(block)
-  const text = range.toString().trim()
-  return text ? { text, range } : null
+  // Innermost text blocks only, in document order (a <li> holding a <p>
+  // counts once, as the <p>).
+  const blocks = [...body.querySelectorAll(TEXT_BLOCKS)].filter((b) => !b.querySelector(TEXT_BLOCKS))
+
+  let index = blocks.length - 1
+  if (caretInEditor) {
+    const current = blocks.findIndex((b) => b.contains(rng.startContainer))
+    if (current !== -1) index = current
+  }
+
+  for (; index >= 0; index--) {
+    const range = editor.getDoc().createRange()
+    range.selectNodeContents(blocks[index])
+    const text = range.toString().trim()
+    if (text) return { text, range }
+  }
+  return null
 }
 
 function fileName(path) {
@@ -550,7 +568,7 @@ export default function App() {
           <span>AI-Powered Suggestions</span>
           <span
             className="assist-info"
-            title="Select text, or place the cursor in a paragraph, then pick an action. Pressing Enter improves the line you just wrote."
+            title="Pick an action to rewrite the selected text. With nothing selected, it uses the paragraph the cursor is in, or the last line you wrote. Pressing Enter improves the line you just wrote."
           >
             <InfoIcon />
           </span>
