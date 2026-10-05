@@ -18,6 +18,7 @@ export namespace main {
 	    host: string;
 	    model: string;
 	    prompt: string;
+	    actionPrompts: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new OllamaSettings(source);
@@ -28,6 +29,7 @@ export namespace main {
 	        this.host = source["host"];
 	        this.model = source["model"];
 	        this.prompt = source["prompt"];
+	        this.actionPrompts = source["actionPrompts"];
 	    }
 	}
 

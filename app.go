@@ -123,18 +123,38 @@ func (a *App) ImproveText(text, host, model, prompt string) (string, error) {
 	return strings.TrimSpace(result.Response), nil
 }
 
-// OllamaSettings holds the configurable connection details and prompt for
-// Ollama.
+const returnOnly = " Return only the rewritten text, with no preamble or explanation."
+
+// defaultActionPrompts are the prompts for the suggestion bar actions, keyed
+// by the action ids the frontend uses.
+var defaultActionPrompts = map[string]string{
+	"clarify": "Rewrite the following text so it is clearer and easier to understand, keeping its meaning." + returnOnly,
+	"concise": "Rewrite the following text to be more concise. Remove filler and redundancy but keep every idea." + returnOnly,
+	"tone":    "Rewrite the following text with a warmer, more natural and engaging tone, keeping its meaning." + returnOnly,
+	"expand":  "Expand the following text with more detail, examples, or depth, in the same voice and style." + returnOnly,
+	"grammar": "Fix the grammar, spelling, and punctuation of the following text. Change nothing else." + returnOnly,
+}
+
+// OllamaSettings holds the configurable connection details and prompts for
+// Ollama. Prompt is used when pressing Enter; ActionPrompts by the
+// suggestion bar actions.
 type OllamaSettings struct {
 	Host   string `json:"host"`
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
+
+	ActionPrompts map[string]string `json:"actionPrompts"`
 }
 
-// GetDefaultOllamaSettings returns the built-in default host/model/prompt,
+// GetDefaultOllamaSettings returns the built-in default host/model/prompts,
 // so the frontend doesn't need to duplicate them.
 func (a *App) GetDefaultOllamaSettings() OllamaSettings {
-	return OllamaSettings{Host: defaultOllamaHost, Model: defaultOllamaModel, Prompt: defaultPrompt}
+	return OllamaSettings{
+		Host:          defaultOllamaHost,
+		Model:         defaultOllamaModel,
+		Prompt:        defaultPrompt,
+		ActionPrompts: defaultActionPrompts,
+	}
 }
 
 // Document is a file opened from or saved to disk. Content is the editor's

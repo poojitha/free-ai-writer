@@ -107,3 +107,10 @@ export const CloseIcon = (p) => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Icon>
 )
+
+export const EnterIcon = (p) => (
+  <Icon {...p}>
+    <path d="M20 5v7a3 3 0 0 1-3 3H5" />
+    <path d="m9 11-4 4 4 4" />
+  </Icon>
+)

@@ -12,6 +12,7 @@ import {
   BulbIcon,
   CloseIcon,
   DocIcon,
+  EnterIcon,
   FolderIcon,
   InfoIcon,
   MoonIcon,
@@ -25,45 +26,41 @@ import {
 } from './icons.jsx'
 
 const SETTINGS_STORAGE_KEY = 'ollamaSettings'
-const RETURN_ONLY = ' Return only the rewritten text, with no preamble or explanation.'
 
 // Suggestion bar actions. Each runs on the selection, or on the paragraph the
-// caret is in when nothing is selected.
+// caret is in when nothing is selected. Default prompts come from Go
+// (GetDefaultOllamaSettings().actionPrompts, keyed by id); user edits are
+// stored as overrides under ollamaSettings.actionPrompts.
 const ACTIONS = [
   {
     id: 'clarify',
     label: 'Clarify this sentence',
     Icon: DocIcon,
     tint: 'blue',
-    prompt: 'Rewrite the following text so it is clearer and easier to understand, keeping its meaning.' + RETURN_ONLY,
   },
   {
     id: 'concise',
     label: 'Make it more concise',
     Icon: WandIcon,
     tint: 'green',
-    prompt: 'Rewrite the following text to be more concise. Remove filler and redundancy but keep every idea.' + RETURN_ONLY,
   },
   {
     id: 'tone',
     label: 'Improve tone',
     Icon: SmileIcon,
     tint: 'amber',
-    prompt: 'Rewrite the following text with a warmer, more natural and engaging tone, keeping its meaning.' + RETURN_ONLY,
   },
   {
     id: 'expand',
     label: 'Expand this idea',
     Icon: BulbIcon,
     tint: 'violet',
-    prompt: 'Expand the following text with more detail, examples, or depth, in the same voice and style.' + RETURN_ONLY,
   },
   {
     id: 'grammar',
     label: 'Fix grammar',
     Icon: ShieldIcon,
     tint: 'red',
-    prompt: 'Fix the grammar, spelling, and punctuation of the following text. Change nothing else.' + RETURN_ONLY,
   },
 ]
 
@@ -171,11 +168,35 @@ function SuggestionCard({ suggestion, onApply, onCopy, onDismiss }) {
   )
 }
 
+function PromptField({ id, label, hint, Icon, tint, value, defaultValue, onChange }) {
+  return (
+    <div className="prompt-field">
+      <div className="prompt-field-head">
+        <span className={`prompt-field-icon tint-${tint}`}><Icon size={14} /></span>
+        <label htmlFor={`prompt-${id}`}>{label}</label>
+        {hint && <span className="settings-hint">{hint}</span>}
+        {defaultValue !== undefined && value !== defaultValue && (
+          <button className="link-button" onClick={() => onChange(defaultValue)}>Reset</button>
+        )}
+      </div>
+      <textarea
+        id={`prompt-${id}`}
+        className="settings-input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+      />
+    </div>
+  )
+}
+
 function SettingsDialog({ themePreference, onThemeChange, onClose }) {
   const [host, setHost] = useState('')
   const [model, setModel] = useState('')
   const [prompt, setPrompt] = useState('')
-  const [loaded, setLoaded] = useState(false)
+  const [actionPrompts, setActionPrompts] = useState({})
+  const [defaults, setDefaults] = useState(null)
+  const [tab, setTab] = useState('general')
 
   useEffect(() => {
     GetDefaultOllamaSettings().then((defaults) => {
@@ -183,14 +204,25 @@ function SettingsDialog({ themePreference, onThemeChange, onClose }) {
       setHost(stored.host || defaults.host)
       setModel(stored.model || defaults.model)
       setPrompt(stored.prompt || defaults.prompt)
-      setLoaded(true)
+      setActionPrompts({ ...defaults.actionPrompts, ...stored.actionPrompts })
+      setDefaults(defaults)
     })
   }, [])
 
   useEffect(() => {
-    if (!loaded) return
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ host, model, prompt }))
-  }, [host, model, prompt, loaded])
+    if (!defaults) return
+    // Only keep action prompts the user changed, so improved defaults still
+    // reach everyone else.
+    const overrides = Object.fromEntries(
+      Object.entries(actionPrompts).filter(([id, p]) => p.trim() && p !== defaults.actionPrompts[id]),
+    )
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({ host, model, prompt, actionPrompts: overrides }),
+    )
+  }, [host, model, prompt, actionPrompts, defaults])
+
+  const setActionPrompt = (id, value) => setActionPrompts((prev) => ({ ...prev, [id]: value }))
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -208,55 +240,90 @@ function SettingsDialog({ themePreference, onThemeChange, onClose }) {
           </button>
         </div>
 
-        <div className="settings-section">
-          <span className="settings-label">Appearance</span>
-          <div className="segmented" role="radiogroup" aria-label="Theme">
-            {['system', 'light', 'dark'].map((t) => (
-              <button
-                key={t}
-                role="radio"
-                aria-checked={themePreference === t}
-                className={themePreference === t ? 'active' : ''}
-                onClick={() => onThemeChange(t)}
-              >
-                {t[0].toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
+        <div className="dialog-tabs" role="tablist">
+          {[['general', 'General'], ['prompts', 'Prompts']].map(([id, label]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              className={tab === id ? 'active' : ''}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <div className="settings-section">
-          <label className="settings-label">
-            Ollama host
-            <input
-              className="settings-input"
-              type="text"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              placeholder="http://localhost:11434"
-            />
-          </label>
-          <label className="settings-label">
-            Model
-            <input
-              className="settings-input"
-              type="text"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="llama3.1:8b"
-            />
-          </label>
-          <label className="settings-label">
-            Improve prompt <span className="settings-hint">— used when you press Enter</span>
-            <textarea
-              className="settings-input"
+        {tab === 'general' && (
+          <>
+            <div className="settings-section">
+              <span className="settings-label">Appearance</span>
+              <div className="segmented" role="radiogroup" aria-label="Theme">
+                {['system', 'light', 'dark'].map((t) => (
+                  <button
+                    key={t}
+                    role="radio"
+                    aria-checked={themePreference === t}
+                    className={themePreference === t ? 'active' : ''}
+                    onClick={() => onThemeChange(t)}
+                  >
+                    {t[0].toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <label className="settings-label">
+                Ollama host
+                <input
+                  className="settings-input"
+                  type="text"
+                  value={host}
+                  onChange={(e) => setHost(e.target.value)}
+                  placeholder="http://localhost:11434"
+                />
+              </label>
+              <label className="settings-label">
+                Model
+                <input
+                  className="settings-input"
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="llama3.1:8b"
+                />
+              </label>
+            </div>
+          </>
+        )}
+
+        {tab === 'prompts' && (
+          <div className="settings-section">
+            <PromptField
+              id="improve"
+              label="Improve prompt"
+              hint={<>used when you press <kbd><EnterIcon size={12} /> Enter</kbd></>}
+              Icon={EnterIcon}
+              tint="neutral"
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Improve the writing quality of the following text..."
-              rows={6}
+              defaultValue={defaults?.prompt}
+              onChange={setPrompt}
             />
-          </label>
-        </div>
+            {ACTIONS.map(({ id, label, Icon, tint }) => (
+              <PromptField
+                key={id}
+                id={id}
+                label={label}
+                Icon={Icon}
+                tint={tint}
+                value={actionPrompts[id] || ''}
+                defaultValue={defaults?.actionPrompts[id]}
+                onChange={(value) => setActionPrompt(id, value)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -304,10 +371,15 @@ export default function App() {
   improveLineRef.current = (target) =>
     runSuggestion(target, 'Improve', (loadStoredSettings() || {}).prompt || '')
 
-  const runAction = (action) => {
+  const runAction = async (action) => {
     const editor = editorRef.current
     if (!editor) return
-    runSuggestion(getActionTarget(editor), action.label, action.prompt)
+    // Capture the target before awaiting, while the selection is current.
+    const target = getActionTarget(editor)
+    if (!target) return
+    const override = (loadStoredSettings() || {}).actionPrompts?.[action.id]
+    const prompt = override || (await GetDefaultOllamaSettings()).actionPrompts[action.id]
+    runSuggestion(target, action.label, prompt)
   }
 
   // The stored Range is live, so it tracks edits around it. If the text it
