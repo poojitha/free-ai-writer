@@ -9,3 +9,11 @@ export function GetDefaultOllamaSettings() {
 export function ImproveText(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ImproveText'](arg1, arg2, arg3, arg4);
 }
+
+export function OpenDocument() {
+  return window['go']['main']['App']['OpenDocument']();
+}
+
+export function SaveDocument(arg1, arg2) {
+  return window['go']['main']['App']['SaveDocument'](arg1, arg2);
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -22,6 +23,10 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
+		// Follow the OS light/dark setting for the native title bar.
+		Windows: &windows.Options{
+			Theme: windows.SystemDefault,
+		},
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -133,4 +135,57 @@ type OllamaSettings struct {
 // so the frontend doesn't need to duplicate them.
 func (a *App) GetDefaultOllamaSettings() OllamaSettings {
 	return OllamaSettings{Host: defaultOllamaHost, Model: defaultOllamaModel, Prompt: defaultPrompt}
+}
+
+// Document is a file opened from or saved to disk. Content is the editor's
+// HTML.
+type Document struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
+var documentFilters = []runtime.FileFilter{
+	{DisplayName: "Documents (*.html)", Pattern: "*.html;*.htm"},
+}
+
+// OpenDocument shows an open dialog and returns the chosen file. If the user
+// cancels, the returned Document has an empty Path.
+func (a *App) OpenDocument() (Document, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   "Open document",
+		Filters: documentFilters,
+	})
+	if err != nil || path == "" {
+		return Document{}, err
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Document{}, err
+	}
+	return Document{Path: path, Content: string(data)}, nil
+}
+
+// SaveDocument writes content to path. If path is empty, a save dialog is
+// shown first. Returns the path written to, or "" if the user cancelled.
+func (a *App) SaveDocument(path, content string) (string, error) {
+	if path == "" {
+		var err error
+		path, err = runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+			Title:           "Save document",
+			DefaultFilename: "Untitled.html",
+			Filters:         documentFilters,
+		})
+		if err != nil || path == "" {
+			return "", err
+		}
+		if filepath.Ext(path) == "" {
+			path += ".html"
+		}
+	}
+
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		return "", err
+	}
+	return path, nil
 }

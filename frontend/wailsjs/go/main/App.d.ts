@@ -5,3 +5,7 @@ import {main} from '../models';
 export function GetDefaultOllamaSettings():Promise<main.OllamaSettings>;
 
 export function ImproveText(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function OpenDocument():Promise<main.Document>;
+
+export function SaveDocument(arg1:string,arg2:string):Promise<string>;
