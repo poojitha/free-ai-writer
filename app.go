@@ -132,15 +132,26 @@ func (a *App) ImproveText(text, host, model, prompt string) (string, error) {
 
 // preamblePattern matches a lead-in line such as "Here is the improved
 // text:" or "Sure! Here's a revised version:" that models add despite being
-// told not to.
-var preamblePattern = regexp.MustCompile(
-	`(?i)^(?:(?:sure|certainly|okay|ok|of course)[!,.]?\s*)?here(?:'s| is| are)\b[^\n]*:[ \t]*\n`)
+// told not to. It must end the line with a colon, so ordinary sentences like
+// "Here is a cat: it purrs." don't match.
+var preamblePattern = regexp.MustCompile(`(?i)\bhere(?:'s| is| are)\b.*:\s*$`)
 
-// cleanResponse trims the model's reply and strips a leading preamble line
-// and any quotes wrapping the whole result.
+// preambleSearchLines is how far into the reply a preamble line is looked
+// for. Models sometimes chat for a line or two before it ("I think the text
+// is incomplete. However, here's the revised text:").
+const preambleSearchLines = 4
+
+// cleanResponse trims the model's reply, drops everything up to and
+// including a preamble line, and strips quotes wrapping the whole result.
 func cleanResponse(s string) string {
 	s = strings.TrimSpace(s)
-	s = strings.TrimSpace(preamblePattern.ReplaceAllString(s+"\n", ""))
+	lines := strings.Split(s, "\n")
+	for i := 0; i < len(lines) && i < preambleSearchLines; i++ {
+		if preamblePattern.MatchString(lines[i]) {
+			s = strings.TrimSpace(strings.Join(lines[i+1:], "\n"))
+			break
+		}
+	}
 	if len(s) >= 2 && strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) &&
 		!strings.Contains(s[1:len(s)-1], `"`) {
 		s = strings.TrimSpace(s[1 : len(s)-1])

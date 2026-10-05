@@ -28,6 +28,9 @@ import {
 
 const SETTINGS_STORAGE_KEY = 'ollamaSettings'
 const TOOLBAR_STORAGE_KEY = 'formattingToolbar'
+const SUGGESTION_HEIGHT_STORAGE_KEY = 'suggestionHeight'
+const DEFAULT_SUGGESTION_HEIGHT = 220
+const MIN_SUGGESTION_HEIGHT = 80
 
 // Suggestion bar actions. Each runs on the selection, or on the paragraph the
 // caret is in when nothing is selected. Default prompts come from Go
@@ -119,6 +122,29 @@ function getLineBeforeCaret(editor) {
 
 const TEXT_BLOCKS = 'p,h1,h2,h3,h4,h5,h6,li,pre,blockquote'
 
+// Innermost text blocks only, in document order (a <li> holding a <p>
+// counts once, as the <p>).
+function getTextBlocks(body) {
+  return [...body.querySelectorAll(TEXT_BLOCKS)].filter((b) => !b.querySelector(TEXT_BLOCKS))
+}
+
+// Where to put a suggestion. Normally its saved live Range, checked against
+// a snapshot of the text it covered. If TinyMCE rebuilt those nodes the Range
+// collapses, so fall back to the one block whose text still matches exactly.
+// Returns null if the text was edited (replacing would clobber new writing).
+function findReplaceRange(editor, suggestion) {
+  const { range, rangeText, original } = suggestion
+  if (normalize(range.toString()) === normalize(rangeText)) return range
+
+  const matches = getTextBlocks(editor.getBody()).filter(
+    (b) => normalize(b.textContent) === normalize(original),
+  )
+  if (matches.length !== 1) return null
+  const fallback = editor.getDoc().createRange()
+  fallback.selectNodeContents(matches[0])
+  return fallback
+}
+
 // The selection if there is one. Otherwise the block the caret is in, or —
 // when that's empty (e.g. right after pressing Enter) or the caret isn't in
 // the editor — the nearest block with text before it.
@@ -132,9 +158,7 @@ function getActionTarget(editor) {
     if (text) return { text, range: rng.cloneRange() }
   }
 
-  // Innermost text blocks only, in document order (a <li> holding a <p>
-  // counts once, as the <p>).
-  const blocks = [...body.querySelectorAll(TEXT_BLOCKS)].filter((b) => !b.querySelector(TEXT_BLOCKS))
+  const blocks = getTextBlocks(body)
 
   let index = blocks.length - 1
   if (caretInEditor) {
@@ -175,24 +199,51 @@ function SuggestionCard({ suggestion, onApply, onCopy, onDismiss }) {
     <div className="suggestion-card">
       <div className="suggestion-head">
         <span className="suggestion-label">{label}</span>
-        <button className="suggestion-dismiss" onClick={onDismiss} aria-label="Dismiss" title="Dismiss">
-          <CloseIcon />
-        </button>
+        <div className="suggestion-actions">
+          {stale && <span className="suggestion-stale">Original text has changed</span>}
+          {improved && <button className="text-button" onClick={onCopy}>Copy</button>}
+          {improved && !stale && <button className="text-button primary" onClick={onApply}>Replace</button>}
+          <button className="suggestion-dismiss" onClick={onDismiss} aria-label="Dismiss" title="Dismiss">
+            <CloseIcon />
+          </button>
+        </div>
       </div>
       <p className="suggestion-original">{original}</p>
       {loading && <div className="suggestion-loading"><span /><span /><span /></div>}
       {error && <p className="suggestion-error">{error}</p>}
-      {improved && (
-        <>
-          <p className="suggestion-result">{improved}</p>
-          <div className="suggestion-actions">
-            {stale && <span className="suggestion-stale">Original text has changed</span>}
-            <button className="text-button" onClick={onCopy}>Copy</button>
-            {!stale && <button className="text-button primary" onClick={onApply}>Replace</button>}
-          </div>
-        </>
-      )}
+      {improved && <p className="suggestion-result">{improved}</p>}
     </div>
+  )
+}
+
+// Drag handle along the top edge of the AI bar. Dragging sets the suggestion
+// list's max height: up grows it, down shrinks it. The drag starts from the
+// list's rendered height, which is less than the max when the content is
+// short, so the list responds immediately.
+function ResizeHandle({ listRef, maxHeight, onResize }) {
+  const startResize = (e) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startHeight = listRef.current?.offsetHeight ?? maxHeight
+    const onMove = (ev) => onResize(startHeight + (startY - ev.clientY))
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      document.body.classList.remove('resizing')
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    document.body.classList.add('resizing')
+  }
+
+  return (
+    <div
+      className="assist-resize"
+      onPointerDown={startResize}
+      role="separator"
+      aria-orientation="horizontal"
+      title="Drag to resize"
+    />
   )
 }
 
@@ -375,6 +426,19 @@ export default function App() {
   const [toolbarOpen, setToolbarOpen] = useState(() => localStorage.getItem(TOOLBAR_STORAGE_KEY) === 'open')
   // Newest first. Each entry: { id, label, original, range, improved, error, loading, stale }.
   const [suggestions, setSuggestions] = useState([])
+  const suggestionListRef = useRef(null)
+  const [suggestionHeight, setSuggestionHeight] = useState(
+    () => Number(localStorage.getItem(SUGGESTION_HEIGHT_STORAGE_KEY)) || DEFAULT_SUGGESTION_HEIGHT,
+  )
+
+  const resizeSuggestion = (height) => {
+    const max = Math.round(window.innerHeight * 0.6)
+    setSuggestionHeight(Math.round(Math.min(max, Math.max(MIN_SUGGESTION_HEIGHT, height))))
+  }
+
+  useEffect(() => {
+    localStorage.setItem(SUGGESTION_HEIGHT_STORAGE_KEY, String(suggestionHeight))
+  }, [suggestionHeight])
 
   const isDark = theme === 'dark'
 
@@ -396,9 +460,22 @@ export default function App() {
     if (!target) return
     const id = nextIdRef.current++
     setSuggestions((prev) => [
-      { id, label, original: target.text, range: target.range, improved: '', error: '', loading: true },
+      {
+        id,
+        label,
+        original: target.text,
+        range: target.range,
+        // Range.toString() joins paragraphs with no separator, unlike
+        // target.text, so the stale check compares against this instead.
+        rangeText: target.range.toString(),
+        improved: '',
+        error: '',
+        loading: true,
+      },
       ...prev,
     ])
+    // Newest is at the top; bring it into view.
+    suggestionListRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
 
     const settings = loadStoredSettings() || {}
     try {
@@ -429,22 +506,30 @@ export default function App() {
     runSuggestion(target, action.label, prompt)
   }
 
-  // The stored Range is live, so it tracks edits around it. If the text it
-  // covers no longer matches what was sent, replacing would clobber new
-  // writing, so the suggestion is marked stale instead.
   const applySuggestion = (s) => {
     const editor = editorRef.current
     if (!editor) return
-    if (normalize(s.range.toString()) !== normalize(s.original)) {
+    const range = findReplaceRange(editor, s)
+    if (!range) {
       updateSuggestion(s.id, { stale: true })
       return
     }
+    // Multi-paragraph text inserted inside a <p> splits it and leaves empty
+    // paragraphs around it, so when the target is a whole block, replace the
+    // block element itself.
+    const html = textToHtml(s.improved)
+    const block = editor.dom.getParent(range.commonAncestorContainer, editor.dom.isBlock, editor.getBody())
+    if (html.startsWith('<p>') && block && block !== editor.getBody() &&
+        normalize(block.textContent) === normalize(range.toString())) {
+      range.selectNode(block)
+    }
+
     editor.focus()
     editor.undoManager.transact(() => {
-      editor.selection.setRng(s.range)
-      editor.selection.setContent(textToHtml(s.improved))
+      editor.selection.setRng(range)
+      editor.selection.setContent(html)
     })
-    setSuggestions((prev) => prev.filter((x) => x.id !== s.id))
+    dismissSuggestion(s.id)
   }
 
   const dismissSuggestion = (id) => setSuggestions((prev) => prev.filter((s) => s.id !== id))
@@ -563,6 +648,7 @@ export default function App() {
       </main>
 
       <footer className="assist">
+        <ResizeHandle listRef={suggestionListRef} maxHeight={suggestionHeight} onResize={resizeSuggestion} />
         <div className="assist-head">
           <span className="assist-sparkle"><SparkleIcon size={18} /></span>
           <span>AI-Powered Suggestions</span>
@@ -578,7 +664,7 @@ export default function App() {
         </div>
 
         {suggestions.length > 0 && (
-          <div className="suggestion-list">
+          <div className="suggestion-list" ref={suggestionListRef} style={{ maxHeight: suggestionHeight }}>
             {suggestions.map((s) => (
               <SuggestionCard
                 key={s.id}

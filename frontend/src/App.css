@@ -285,6 +285,7 @@ button {
 /* ---- Suggestions panel ---- */
 
 .assist {
+  position: relative;
   flex: 0 0 auto;
   margin: 0 16px 12px;
   padding: 10px 14px 12px;
@@ -301,6 +302,10 @@ button {
   color: var(--text-muted);
 }
 
+.assist-clear {
+  margin-left: auto;
+}
+
 .assist-sparkle {
   display: flex;
   color: var(--accent);
@@ -310,10 +315,6 @@ button {
   display: flex;
   color: var(--text-faint);
   cursor: help;
-}
-
-.assist-clear {
-  margin-left: auto;
 }
 
 .chips {
@@ -361,17 +362,51 @@ button {
 .tint-red    { background: var(--tint-red-bg);    color: var(--tint-red-fg); }
 .tint-neutral { background: var(--hover);         color: var(--text); }
 
+/* Grab strip along the AI bar's top edge; drag to resize the list. */
+.assist-resize {
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.assist-resize::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.assist-resize:hover::after,
+body.resizing .assist-resize::after {
+  background: var(--accent);
+}
+
+body.resizing {
+  cursor: ns-resize;
+  user-select: none;
+}
+
 .suggestion-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 34vh;
+  margin-top: 10px;
+  padding-right: 4px;
   overflow-y: auto;
-  margin-top: 12px;
 }
 
 .suggestion-card {
-  padding: 12px 14px;
+  flex: 0 0 auto;
+  padding: 10px 14px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -382,6 +417,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
 }
 
 .suggestion-label {
@@ -460,13 +497,10 @@ button {
 .suggestion-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
-  margin-top: 10px;
 }
 
 .suggestion-stale {
-  margin-right: auto;
   font-size: 12px;
   color: var(--text-faint);
 }
