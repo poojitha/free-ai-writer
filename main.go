@@ -27,7 +27,7 @@ func main() {
 		Windows: &windows.Options{
 			Theme: windows.SystemDefault,
 		},
-		OnStartup:        app.startup,
+		OnStartup: app.startup,
 		Bind: []interface{}{
 			app,
 		},

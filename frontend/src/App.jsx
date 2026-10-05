@@ -8,176 +8,36 @@ import {
 } from '../wailsjs/go/main/App'
 import { ClipboardSetText, WindowSetTitle } from '../wailsjs/runtime/runtime'
 import { useTheme } from './theme.js'
+import SettingsDialog from './SettingsDialog.jsx'
 import {
-  BulbIcon,
+  fileName,
+  findReplaceRange,
+  getActionTarget,
+  getLineBeforeCaret,
+  textToHtml,
+  widenToBlock,
+} from './editorText.js'
+import {
+  ACTIONS,
+  DEFAULT_SUGGESTION_HEIGHT,
+  SUGGESTION_HEIGHT_STORAGE_KEY,
+  clampSuggestionHeight,
+  loadStoredSettings,
+  resolveActionPrompt,
+} from './settings.js'
+import {
   CloseIcon,
-  DocIcon,
-  EnterIcon,
   FolderIcon,
   InfoIcon,
   MoonIcon,
   PenIcon,
   SaveIcon,
   SettingsIcon,
-  ShieldIcon,
-  SmileIcon,
   SparkleIcon,
   SunIcon,
-  WandIcon,
 } from './icons.jsx'
 
-const SETTINGS_STORAGE_KEY = 'ollamaSettings'
 const TOOLBAR_STORAGE_KEY = 'formattingToolbar'
-const SUGGESTION_HEIGHT_STORAGE_KEY = 'suggestionHeight'
-const DEFAULT_SUGGESTION_HEIGHT = 220
-const MIN_SUGGESTION_HEIGHT = 80
-
-// Suggestion bar actions. Each runs on the selection, or on the paragraph the
-// caret is in when nothing is selected. Default prompts come from Go
-// (GetDefaultOllamaSettings().actionPrompts, keyed by id); user edits are
-// stored as overrides under ollamaSettings.actionPrompts. The exception is
-// IMPROVE_ID, which shares the Enter-key prompt (ollamaSettings.prompt).
-const IMPROVE_ID = 'improve'
-const ACTIONS = [
-  {
-    id: IMPROVE_ID,
-    label: 'Improve writing',
-    Icon: DocIcon,
-    tint: 'blue',
-  },
-  {
-    id: 'concise',
-    label: 'Make it more concise',
-    Icon: WandIcon,
-    tint: 'green',
-  },
-  {
-    id: 'tone',
-    label: 'Improve tone',
-    Icon: SmileIcon,
-    tint: 'amber',
-  },
-  {
-    id: 'expand',
-    label: 'Expand this idea',
-    Icon: BulbIcon,
-    tint: 'violet',
-  },
-  {
-    id: 'grammar',
-    label: 'Fix grammar',
-    Icon: ShieldIcon,
-    tint: 'red',
-  },
-]
-
-function loadStoredSettings() {
-  try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
-const normalize = (text) => text.replace(/\s+/g, ' ').trim()
-
-function escapeHtml(text) {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
-
-// Plain text from Ollama → HTML. Blank lines become paragraphs, single
-// newlines become <br>.
-function textToHtml(text) {
-  const paragraphs = text.split(/\n{2,}/).map((p) => escapeHtml(p).replace(/\n/g, '<br>'))
-  return paragraphs.length === 1 ? paragraphs[0] : paragraphs.map((p) => `<p>${p}</p>`).join('')
-}
-
-// Returns the text of the line the caret is on, up to the caret, plus a live
-// Range over it. A "line" is the current block (paragraph, heading, list
-// item), further split on <br> so Shift+Enter line breaks count too.
-function getLineBeforeCaret(editor) {
-  const rng = editor.selection.getRng()
-  const block = editor.dom.getParent(rng.startContainer, editor.dom.isBlock, editor.getBody())
-  if (!block) return null
-
-  const doc = editor.getDoc()
-  const before = doc.createRange()
-  before.setStart(block, 0)
-  before.setEnd(rng.startContainer, rng.startOffset)
-
-  let lastBr = null
-  block.querySelectorAll('br').forEach((br) => {
-    const afterBr = doc.createRange()
-    afterBr.setStartAfter(br)
-    if (before.isPointInRange(afterBr.startContainer, afterBr.startOffset)) lastBr = br
-  })
-  if (lastBr) before.setStartAfter(lastBr)
-
-  const text = before.toString().trim()
-  return text ? { text, range: before } : null
-}
-
-const TEXT_BLOCKS = 'p,h1,h2,h3,h4,h5,h6,li,pre,blockquote'
-
-// Innermost text blocks only, in document order (a <li> holding a <p>
-// counts once, as the <p>).
-function getTextBlocks(body) {
-  return [...body.querySelectorAll(TEXT_BLOCKS)].filter((b) => !b.querySelector(TEXT_BLOCKS))
-}
-
-// Where to put a suggestion. Normally its saved live Range, checked against
-// a snapshot of the text it covered. If TinyMCE rebuilt those nodes the Range
-// collapses, so fall back to the one block whose text still matches exactly.
-// Returns null if the text was edited (replacing would clobber new writing).
-function findReplaceRange(editor, suggestion) {
-  const { range, rangeText, original } = suggestion
-  if (normalize(range.toString()) === normalize(rangeText)) return range
-
-  const matches = getTextBlocks(editor.getBody()).filter(
-    (b) => normalize(b.textContent) === normalize(original),
-  )
-  if (matches.length !== 1) return null
-  const fallback = editor.getDoc().createRange()
-  fallback.selectNodeContents(matches[0])
-  return fallback
-}
-
-// The selection if there is one. Otherwise the block the caret is in, or —
-// when that's empty (e.g. right after pressing Enter) or the caret isn't in
-// the editor — the nearest block with text before it.
-function getActionTarget(editor) {
-  const body = editor.getBody()
-  const rng = editor.selection.getRng()
-  const caretInEditor = body.contains(rng.startContainer)
-
-  if (caretInEditor && !rng.collapsed) {
-    const text = editor.selection.getContent({ format: 'text' }).trim()
-    if (text) return { text, range: rng.cloneRange() }
-  }
-
-  const blocks = getTextBlocks(body)
-
-  let index = blocks.length - 1
-  if (caretInEditor) {
-    const current = blocks.findIndex((b) => b.contains(rng.startContainer))
-    if (current !== -1) index = current
-  }
-
-  for (; index >= 0; index--) {
-    const range = editor.getDoc().createRange()
-    range.selectNodeContents(blocks[index])
-    const text = range.toString().trim()
-    if (text) return { text, range }
-  }
-  return null
-}
-
-function fileName(path) {
-  return path ? path.split(/[\\/]/).pop() : 'Untitled'
-}
 
 function IconButton({ label, onClick, active, children }) {
   return (
@@ -247,175 +107,6 @@ function ResizeHandle({ listRef, maxHeight, onResize }) {
   )
 }
 
-function PromptField({ id, label, hint, Icon, tint, value, defaultValue, onChange }) {
-  return (
-    <div className="prompt-field">
-      <div className="prompt-field-head">
-        <span className={`prompt-field-icon tint-${tint}`}><Icon size={14} /></span>
-        <label htmlFor={`prompt-${id}`}>{label}</label>
-        {hint && <span className="settings-hint">{hint}</span>}
-        {defaultValue !== undefined && value !== defaultValue && (
-          <button className="link-button" onClick={() => onChange(defaultValue)}>Reset</button>
-        )}
-      </div>
-      <textarea
-        id={`prompt-${id}`}
-        className="settings-input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-      />
-    </div>
-  )
-}
-
-function SettingsDialog({ themePreference, onThemeChange, onClose }) {
-  const [host, setHost] = useState('')
-  const [model, setModel] = useState('')
-  const [prompt, setPrompt] = useState('')
-  const [actionPrompts, setActionPrompts] = useState({})
-  const [defaults, setDefaults] = useState(null)
-  const [tab, setTab] = useState('general')
-
-  useEffect(() => {
-    GetDefaultOllamaSettings().then((defaults) => {
-      const stored = loadStoredSettings() || {}
-      setHost(stored.host || defaults.host)
-      setModel(stored.model || defaults.model)
-      setPrompt(stored.prompt || defaults.prompt)
-      setActionPrompts({ ...defaults.actionPrompts, ...stored.actionPrompts })
-      setDefaults(defaults)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!defaults) return
-    // Only keep prompts the user changed, so improved defaults still reach
-    // everyone else.
-    const isOverride = (p, def) => p.trim() && p !== def
-    const overrides = Object.fromEntries(
-      Object.entries(actionPrompts).filter(([id, p]) => isOverride(p, defaults.actionPrompts[id])),
-    )
-    localStorage.setItem(
-      SETTINGS_STORAGE_KEY,
-      JSON.stringify({
-        host,
-        model,
-        prompt: isOverride(prompt, defaults.prompt) ? prompt : undefined,
-        actionPrompts: overrides,
-      }),
-    )
-  }, [host, model, prompt, actionPrompts, defaults])
-
-  const setActionPrompt = (id, value) => setActionPrompts((prev) => ({ ...prev, [id]: value }))
-
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <div className="dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        <div className="dialog-head">
-          <h2 id="settings-title">Settings</h2>
-          <button className="suggestion-dismiss" onClick={onClose} aria-label="Close">
-            <CloseIcon />
-          </button>
-        </div>
-
-        <div className="dialog-tabs" role="tablist">
-          {[['general', 'General'], ['prompts', 'Prompts']].map(([id, label]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={tab === id}
-              className={tab === id ? 'active' : ''}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'general' && (
-          <>
-            <div className="settings-section">
-              <span className="settings-label">Appearance</span>
-              <div className="segmented" role="radiogroup" aria-label="Theme">
-                {['system', 'light', 'dark'].map((t) => (
-                  <button
-                    key={t}
-                    role="radio"
-                    aria-checked={themePreference === t}
-                    className={themePreference === t ? 'active' : ''}
-                    onClick={() => onThemeChange(t)}
-                  >
-                    {t[0].toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <label className="settings-label">
-                Ollama host
-                <input
-                  className="settings-input"
-                  type="text"
-                  value={host}
-                  onChange={(e) => setHost(e.target.value)}
-                  placeholder="http://localhost:11434"
-                />
-              </label>
-              <label className="settings-label">
-                Model
-                <input
-                  className="settings-input"
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="llama3.1:8b"
-                />
-              </label>
-            </div>
-          </>
-        )}
-
-        {tab === 'prompts' && (
-          <div className="settings-section">
-            {ACTIONS.map(({ id, label, Icon, tint }) => id === IMPROVE_ID ? (
-              <PromptField
-                key={id}
-                id={id}
-                label={label}
-                hint={<>also runs when you press <kbd><EnterIcon size={12} /> Enter</kbd></>}
-                Icon={Icon}
-                tint={tint}
-                value={prompt}
-                defaultValue={defaults?.prompt}
-                onChange={setPrompt}
-              />
-            ) : (
-              <PromptField
-                key={id}
-                id={id}
-                label={label}
-                Icon={Icon}
-                tint={tint}
-                value={actionPrompts[id] || ''}
-                defaultValue={defaults?.actionPrompts[id]}
-                onChange={(value) => setActionPrompt(id, value)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const editorRef = useRef(null)
   const nextIdRef = useRef(0)
@@ -431,10 +122,7 @@ export default function App() {
     () => Number(localStorage.getItem(SUGGESTION_HEIGHT_STORAGE_KEY)) || DEFAULT_SUGGESTION_HEIGHT,
   )
 
-  const resizeSuggestion = (height) => {
-    const max = Math.round(window.innerHeight * 0.6)
-    setSuggestionHeight(Math.round(Math.min(max, Math.max(MIN_SUGGESTION_HEIGHT, height))))
-  }
+  const resizeSuggestion = (height) => setSuggestionHeight(clampSuggestionHeight(height, window.innerHeight))
 
   useEffect(() => {
     localStorage.setItem(SUGGESTION_HEIGHT_STORAGE_KEY, String(suggestionHeight))
@@ -498,11 +186,7 @@ export default function App() {
     // Capture the target before awaiting, while the selection is current.
     const target = getActionTarget(editor)
     if (!target) return
-    const stored = loadStoredSettings() || {}
-    // An empty prompt makes ImproveText use the Go default.
-    const prompt = action.id === IMPROVE_ID
-      ? stored.prompt || ''
-      : stored.actionPrompts?.[action.id] || (await GetDefaultOllamaSettings()).actionPrompts[action.id]
+    const prompt = await resolveActionPrompt(action.id, loadStoredSettings() || {}, GetDefaultOllamaSettings)
     runSuggestion(target, action.label, prompt)
   }
 
@@ -514,16 +198,8 @@ export default function App() {
       updateSuggestion(s.id, { stale: true })
       return
     }
-    // Multi-paragraph text inserted inside a <p> splits it and leaves empty
-    // paragraphs around it, so when the target is a whole block, replace the
-    // block element itself.
     const html = textToHtml(s.improved)
-    const block = editor.dom.getParent(range.commonAncestorContainer, editor.dom.isBlock, editor.getBody())
-    if (html.startsWith('<p>') && block && block !== editor.getBody() &&
-        normalize(block.textContent) === normalize(range.toString())) {
-      range.selectNode(block)
-    }
-
+    widenToBlock(editor, range, html)
     editor.focus()
     editor.undoManager.transact(() => {
       editor.selection.setRng(range)
