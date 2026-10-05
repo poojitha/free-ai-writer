@@ -40,7 +40,6 @@ import {
   SunIcon,
 } from './icons.jsx'
 
-const TOOLBAR_STORAGE_KEY = 'formattingToolbar'
 
 function IconButton({ label, onClick, active, children }) {
   return (
@@ -117,7 +116,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [docPath, setDocPath] = useState('')
   const [dirty, setDirty] = useState(false)
-  const [toolbarOpen, setToolbarOpen] = useState(() => localStorage.getItem(TOOLBAR_STORAGE_KEY) === 'open')
+  // The formatting toolbar starts hidden each launch; the pen button shows it.
+  const [toolbarOpen, setToolbarOpen] = useState(false)
   // Newest first. Each entry: { id, label, original, range, improved, error, loading, stale }.
   const [suggestions, setSuggestions] = useState([])
   const suggestionListRef = useRef(null)
@@ -134,7 +134,6 @@ export default function App() {
   const isDark = theme === 'dark'
 
   useEffect(() => {
-    localStorage.setItem(TOOLBAR_STORAGE_KEY, toolbarOpen ? 'open' : 'closed')
     // TinyMCE measured the toolbar while it was hidden; have it re-measure
     // which buttons fit before the overflow (⋯) menu.
     if (toolbarOpen) window.dispatchEvent(new Event('resize'))
@@ -320,13 +319,30 @@ export default function App() {
               toolbar:
                 'undo redo | blocks | bold italic underline strikethrough | ' +
                 'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | ' +
-                'blockquote link | removeformat',
+                'blockquote link image | removeformat',
               toolbar_mode: 'floating',
               fixed_toolbar_container: '#editor-toolbar',
               toolbar_persist: true,
               placeholder: 'Start writing…',
-              plugins: ['autolink', 'lists', 'link'],
+              plugins: ['autolink', 'lists', 'link', 'image'],
+              // There's no server to upload to, so images (inserted from the
+              // dialog's Upload tab, pasted or dropped) are embedded in the
+              // document as data: URLs and saved with it.
+              images_upload_handler: (blobInfo) =>
+                Promise.resolve(`data:${blobInfo.blob().type};base64,${blobInfo.base64()}`),
+              // The types a Word file can embed.
+              images_file_types: 'jpeg,jpg,jpe,jfi,jif,jfif,png,gif,bmp',
+              image_description: true,
+              image_dimensions: true,
               setup: (editor) => {
+                // The image dialog opens on its General (URL) tab. For a new
+                // image start on Upload, since local files are the usual
+                // source; editing an image keeps General, with its size and
+                // alt text. It's recognised by its upload drop zone.
+                editor.on('OpenWindow', ({ dialog }) => {
+                  const data = dialog.getData()
+                  if ('fileinput' in data && !data.src?.value) dialog.showTab('upload')
+                })
                 editor.on('keydown', (e) => {
                   if (e.key !== 'Enter' || e.isComposing) return
                   // Read the line before TinyMCE splits the block.

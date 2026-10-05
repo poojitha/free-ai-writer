@@ -282,6 +282,12 @@ button {
   color: var(--accent);
 }
 
+/* Large images shrink to the page width, keeping their aspect ratio. */
+.doc .mce-content-body img {
+  max-width: 100%;
+  height: auto;
+}
+
 .doc .mce-content-body[data-mce-placeholder]:not(.mce-visualblocks)::before {
   color: var(--text-faint);
 }

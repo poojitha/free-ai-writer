@@ -91,6 +91,61 @@ export async function importDocument(path, base64) {
   return htmlFileToEditorHtml(base64ToText(base64))
 }
 
+// ---- Images ----
+
+// Image formats Word files can embed, by MIME type. Others (WebP, SVG) are
+// left out of .docx.
+const DOCX_IMAGE_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/bmp': 'bmp' }
+// The text width of a Word page with default margins: 6.5in at 96px/in.
+const MAX_DOCX_IMAGE_WIDTH = 624
+
+function parseDataUrl(src) {
+  const m = /^data:([^;,]+);base64,(.*)$/s.exec(src)
+  return m && { mime: m[1].toLowerCase(), bytes: base64ToBytes(m[2]) }
+}
+
+// An image's pixel size from its file header, or null if it can't be read.
+// type is a DOCX_IMAGE_TYPES value.
+export function imageSize(bytes, type) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  let size = null
+  try {
+    if (type === 'png') size = { width: view.getUint32(16), height: view.getUint32(20) }
+    else if (type === 'gif') size = { width: view.getUint16(6, true), height: view.getUint16(8, true) }
+    else if (type === 'bmp') size = { width: view.getInt32(18, true), height: Math.abs(view.getInt32(22, true)) }
+    else if (type === 'jpg') {
+      // Walk the segments to the start-of-frame one (C0–CF, except the C4,
+      // C8 and CC markers), which holds height then width.
+      for (let i = 2; i + 9 < bytes.length; i += 2 + view.getUint16(i + 2)) {
+        if (bytes[i] !== 0xff) break
+        const marker = bytes[i + 1]
+        if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+          size = { width: view.getUint16(i + 7), height: view.getUint16(i + 5) }
+          break
+        }
+      }
+    }
+  } catch {
+    return null // truncated file
+  }
+  return size?.width > 0 && size?.height > 0 ? size : null
+}
+
+// The size to show an <img> at in Word: its width/height attributes (one
+// alone keeps the aspect ratio), else its natural size, shrunk to fit the
+// page.
+function docxImageSize(img, natural) {
+  const attrWidth = parseInt(img.getAttribute('width'), 10) || 0
+  const attrHeight = parseInt(img.getAttribute('height'), 10) || 0
+  let width = attrWidth || (attrHeight ? (natural.width * attrHeight) / natural.height : natural.width)
+  let height = attrHeight || (natural.height * width) / natural.width
+  if (width > MAX_DOCX_IMAGE_WIDTH) {
+    height = (height * MAX_DOCX_IMAGE_WIDTH) / width
+    width = MAX_DOCX_IMAGE_WIDTH
+  }
+  return { width: Math.round(width), height: Math.round(height) }
+}
+
 // ---- HTML → .docx ----
 
 const HEADINGS = { H1: 'HEADING_1', H2: 'HEADING_2', H3: 'HEADING_3', H4: 'HEADING_4', H5: 'HEADING_5', H6: 'HEADING_6' }
@@ -103,7 +158,23 @@ async function htmlToDocxBase64(html) {
   // Each <ol> gets its own numbering instance so it restarts at 1.
   let nextListInstance = 0
 
-  // Inline content → TextRuns (and hyperlinks).
+  // Embedded (data: URL) images in a format Word supports; others, such as
+  // links to images on the web, are dropped.
+  function imageRun(img) {
+    const parsed = parseDataUrl(img.getAttribute('src') || '')
+    const type = parsed && DOCX_IMAGE_TYPES[parsed.mime]
+    if (!type) return []
+    const natural = imageSize(parsed.bytes, type) || { width: 400, height: 300 }
+    const alt = img.getAttribute('alt')
+    return [new docx.ImageRun({
+      type,
+      data: parsed.bytes,
+      transformation: docxImageSize(img, natural),
+      altText: alt ? { name: alt, description: alt } : undefined,
+    })]
+  }
+
+  // Inline content → TextRuns (and hyperlinks and images).
   function runs(node, marks) {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent.replace(/[ \t\r\n]+/g, ' ')
@@ -120,6 +191,7 @@ async function htmlToDocxBase64(html) {
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return []
     if (node.nodeName === 'BR') return [new docx.TextRun({ break: 1 })]
+    if (node.nodeName === 'IMG') return imageRun(node)
 
     const decoration = node.style?.textDecoration ?? ''
     const next = {
@@ -178,7 +250,7 @@ async function htmlToDocxBase64(html) {
     const out = []
     let pending = document.createElement('p')
     const flush = () => {
-      if (pending.textContent.trim()) out.push(paragraph(pending, options))
+      if (pending.textContent.trim() || pending.querySelector('img')) out.push(paragraph(pending, options))
       pending = document.createElement('p')
     }
     for (const node of container.childNodes) {

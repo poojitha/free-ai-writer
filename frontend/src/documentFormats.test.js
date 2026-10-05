@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { exportDocument, formatFromPath, importDocument, plainTextToHtml } from './documentFormats.js'
+import { exportDocument, formatFromPath, imageSize, importDocument, plainTextToHtml } from './documentFormats.js'
 
 const decode = (base64) => new TextDecoder().decode(Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)))
 
@@ -94,5 +94,57 @@ describe('Word (.docx)', () => {
   it('handles an empty document', async () => {
     const base64 = await exportDocument('docx', '', '')
     expect(await importDocument('empty.docx', base64)).toBe('')
+  })
+})
+
+describe('images', () => {
+  // 1×1 PNG and GIF files.
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+  const GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  const bytes = (base64) => Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+
+  it('reads image sizes from PNG, GIF and JPEG headers', () => {
+    expect(imageSize(bytes(PNG), 'png')).toEqual({ width: 1, height: 1 })
+    expect(imageSize(bytes(GIF), 'gif')).toEqual({ width: 1, height: 1 })
+    // SOI, an APP0 segment to skip, then SOF0 with height 32 and width 64.
+    const jpeg = new Uint8Array(24)
+    jpeg.set([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0, 0, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x00, 0x20, 0x00, 0x40])
+    expect(imageSize(jpeg, 'jpg')).toEqual({ width: 64, height: 32 })
+    expect(imageSize(new Uint8Array(4), 'png')).toBeNull()
+  })
+
+  it('embeds images in Word files, sized and with alt text, and opens them back', async () => {
+    const html = `<p>Before</p><p><img src="data:image/png;base64,${PNG}" alt="A dot" width="40" height="20"></p>`
+    const base64 = await exportDocument('docx', html, '')
+
+    const zip = await JSZip.loadAsync(base64, { base64: true })
+    expect(Object.keys(zip.files).some((f) => f.startsWith('word/media/'))).toBe(true)
+    const xml = await zip.file('word/document.xml').async('string')
+    expect(xml).toContain('descr="A dot"')
+    // 40×20px in EMUs (9525 per pixel).
+    expect(xml).toContain(`cx="${40 * 9525}" cy="${20 * 9525}"`)
+
+    const opened = await importDocument('pic.docx', base64)
+    expect(opened).toContain('<p>Before</p>')
+    expect(opened).toMatch(/<img [^>]*src="data:image\/png;base64,/)
+  })
+
+  it('keeps an image that sits between blocks, and shrinks wide ones to the page', async () => {
+    const html = `<p>Text</p><img src="data:image/png;base64,${PNG}" width="1248">`
+    const xml = await docxXml(await exportDocument('docx', html, ''))
+    // Shrunk to 624px wide, keeping the 1:1 ratio.
+    expect(xml).toContain(`cx="${624 * 9525}" cy="${624 * 9525}"`)
+  })
+
+  it('leaves out images Word cannot embed', async () => {
+    const html = '<p>Hi <img src="https://example.com/cat.png"><img src="data:image/webp;base64,AAAA"></p>'
+    const xml = await docxXml(await exportDocument('docx', html, ''))
+    expect(xml).toContain('Hi')
+    expect(xml).not.toContain('<w:drawing>')
+  })
+
+  it('keeps images in HTML files', async () => {
+    const html = `<p><img src="data:image/png;base64,${PNG}" alt="A dot"></p>`
+    expect(await importDocument('page.html', await exportDocument('html', html, ''))).toContain(PNG)
   })
 })
