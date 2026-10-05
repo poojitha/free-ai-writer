@@ -90,12 +90,13 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  min-height: 56px;
   padding: 0 16px 0 24px;
   border-bottom: 1px solid var(--border);
 }
 
 .doc-name {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -111,6 +112,7 @@ button {
 }
 
 .topbar-actions {
+  flex: 0 0 auto;
   display: flex;
   gap: 4px;
 }
@@ -131,11 +133,93 @@ button {
   background: var(--hover);
 }
 
+.icon-button.active {
+  background: var(--tint-violet-bg);
+  color: var(--accent);
+}
+
 .icon-button:focus-visible,
 .chip:focus-visible,
 .text-button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ---- Editor toolbar ---- */
+
+/* The oxide skins are restyled with the theme tokens so the toolbar matches
+   the rest of the app in both themes. */
+.editor-toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 8px;
+}
+
+.editor-toolbar.hidden {
+  display: none;
+}
+
+.editor-toolbar .tox.tox-tinymce-inline {
+  position: static !important;
+  width: 100% !important;
+  border: none;
+  background: transparent;
+}
+
+.editor-toolbar .tox .tox-editor-container,
+.editor-toolbar .tox .tox-toolbar-overlord,
+.editor-toolbar .tox .tox-editor-header,
+.editor-toolbar .tox .tox-toolbar,
+.editor-toolbar .tox .tox-toolbar__primary,
+.editor-toolbar .tox .tox-toolbar__overflow {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  justify-content: flex-end;
+}
+
+.editor-toolbar .tox .tox-toolbar__group {
+  padding: 4px 6px;
+}
+
+.editor-toolbar .tox .tox-toolbar__group:not(:last-of-type) {
+  border-right: 1px solid var(--border) !important;
+}
+
+.editor-toolbar .tox .tox-tbtn {
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.editor-toolbar .tox .tox-tbtn svg {
+  fill: currentColor !important;
+}
+
+.editor-toolbar .tox .tox-tbtn:hover,
+.editor-toolbar .tox .tox-tbtn:focus:not(.tox-tbtn--disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.editor-toolbar .tox .tox-tbtn--enabled,
+.editor-toolbar .tox .tox-tbtn--enabled:hover {
+  background: var(--tint-violet-bg);
+  color: var(--accent);
+}
+
+.editor-toolbar .tox .tox-tbtn--disabled,
+.editor-toolbar .tox .tox-tbtn--disabled:hover {
+  background: none;
+  color: var(--text-faint);
+}
+
+.editor-toolbar .tox .tox-tbtn__select-label {
+  color: inherit;
+  font-family: var(--font-ui);
 }
 
 /* ---- Document ---- */
@@ -146,10 +230,11 @@ button {
   cursor: text;
 }
 
+/* Left-aligned so writing starts at the left edge; the max width keeps line
+   length readable on wide windows. */
 .doc {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 72px 32px 48px;
+  max-width: 960px;
+  padding: 48px 56px;
 }
 
 .doc .mce-content-body {

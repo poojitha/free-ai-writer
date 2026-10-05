@@ -16,6 +16,7 @@ import {
   FolderIcon,
   InfoIcon,
   MoonIcon,
+  PenIcon,
   SaveIcon,
   SettingsIcon,
   ShieldIcon,
@@ -26,6 +27,7 @@ import {
 } from './icons.jsx'
 
 const SETTINGS_STORAGE_KEY = 'ollamaSettings'
+const TOOLBAR_STORAGE_KEY = 'formattingToolbar'
 
 // Suggestion bar actions. Each runs on the selection, or on the paragraph the
 // caret is in when nothing is selected. Default prompts come from Go
@@ -135,9 +137,15 @@ function fileName(path) {
   return path ? path.split(/[\\/]/).pop() : 'Untitled'
 }
 
-function IconButton({ label, onClick, children }) {
+function IconButton({ label, onClick, active, children }) {
   return (
-    <button className="icon-button" onClick={onClick} title={label} aria-label={label}>
+    <button
+      className={`icon-button ${active ? 'active' : ''}`}
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+    >
       {children}
     </button>
   )
@@ -346,10 +354,18 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [docPath, setDocPath] = useState('')
   const [dirty, setDirty] = useState(false)
+  const [toolbarOpen, setToolbarOpen] = useState(() => localStorage.getItem(TOOLBAR_STORAGE_KEY) === 'open')
   // Newest first. Each entry: { id, label, original, range, improved, error, loading, stale }.
   const [suggestions, setSuggestions] = useState([])
 
   const isDark = theme === 'dark'
+
+  useEffect(() => {
+    localStorage.setItem(TOOLBAR_STORAGE_KEY, toolbarOpen ? 'open' : 'closed')
+    // TinyMCE measured the toolbar while it was hidden; have it re-measure
+    // which buttons fit before the overflow (⋯) menu.
+    if (toolbarOpen) window.dispatchEvent(new Event('resize'))
+  }, [toolbarOpen])
 
   useEffect(() => {
     WindowSetTitle(`${dirty ? '• ' : ''}${fileName(docPath)} — Write`)
@@ -465,7 +481,16 @@ export default function App() {
           {fileName(docPath)}
           {dirty && <span className="dirty-dot" title="Unsaved changes" />}
         </div>
+        {/* TinyMCE renders its toolbar here (fixed_toolbar_container). */}
+        <div id="editor-toolbar" className={`editor-toolbar ${toolbarOpen ? '' : 'hidden'}`} />
         <div className="topbar-actions">
+          <IconButton
+            label={toolbarOpen ? 'Hide formatting toolbar' : 'Show formatting toolbar'}
+            active={toolbarOpen}
+            onClick={() => setToolbarOpen((open) => !open)}
+          >
+            <PenIcon />
+          </IconButton>
           <IconButton
             label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             onClick={() => setThemePreference(isDark ? 'light' : 'dark')}
@@ -497,11 +522,15 @@ export default function App() {
               skin: false,
               content_css: false,
               menubar: false,
-              toolbar: false,
+              toolbar:
+                'undo redo | blocks | bold italic underline strikethrough | ' +
+                'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | ' +
+                'blockquote link | removeformat',
+              toolbar_mode: 'floating',
+              fixed_toolbar_container: '#editor-toolbar',
+              toolbar_persist: true,
               placeholder: 'Start writing…',
-              plugins: ['autolink', 'lists', 'link', 'quickbars'],
-              quickbars_selection_toolbar: 'bold italic | h1 h2 blockquote | bullist numlist | quicklink',
-              quickbars_insert_toolbar: false,
+              plugins: ['autolink', 'lists', 'link'],
               setup: (editor) => {
                 editor.on('keydown', (e) => {
                   if (e.key !== 'Enter' || e.isComposing) return
