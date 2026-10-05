@@ -40,7 +40,6 @@ import {
   SunIcon,
 } from './icons.jsx'
 
-
 function IconButton({ label, onClick, active, children }) {
   return (
     <button
@@ -319,12 +318,12 @@ export default function App() {
               toolbar:
                 'undo redo | blocks | bold italic underline strikethrough | ' +
                 'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | ' +
-                'blockquote link image | removeformat',
+                'blockquote image | removeformat',
               toolbar_mode: 'floating',
               fixed_toolbar_container: '#editor-toolbar',
               toolbar_persist: true,
               placeholder: 'Start writing…',
-              plugins: ['autolink', 'lists', 'link', 'image'],
+              plugins: ['autolink', 'lists', 'image'],
               // There's no server to upload to, so images (inserted from the
               // dialog's Upload tab, pasted or dropped) are embedded in the
               // document as data: URLs and saved with it.
