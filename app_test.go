@@ -175,29 +175,42 @@ func TestActionPromptsMatchFrontendActions(t *testing.T) {
 	}
 }
 
-func TestSaveDocumentWritesToGivenPath(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "essay.html")
-	content := "<p>Hello</p>"
+func TestWriteDocument(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "essay.docx")
+	data := []byte{0x50, 0x4b, 0x03, 0x04, 0x00} // binary-safe
 
-	got, err := newTestApp().SaveDocument(path, content)
+	if err := newTestApp().WriteDocument(path, data); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != path {
-		t.Errorf("returned path = %q, want %q", got, path)
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != content {
-		t.Errorf("file = %q, want %q", data, content)
+	if string(got) != string(data) {
+		t.Errorf("file = %v, want %v", got, data)
 	}
 }
 
-func TestSaveDocumentReportsWriteErrors(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "missing-dir", "essay.html")
-	if _, err := newTestApp().SaveDocument(path, "x"); err == nil {
+func TestWriteDocumentReportsErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing-dir", "essay.docx")
+	if err := newTestApp().WriteDocument(path, []byte("x")); err == nil {
 		t.Error("want an error")
+	}
+}
+
+func TestWithDocumentExtension(t *testing.T) {
+	cases := map[string]string{
+		`C:\docs\essay.docx`:    `C:\docs\essay.docx`,
+		`C:\docs\essay.TXT`:     `C:\docs\essay.TXT`,
+		`C:\docs\essay.html`:    `C:\docs\essay.html`,
+		`C:\docs\essay.htm`:     `C:\docs\essay.htm`,
+		`C:\docs\essay`:         `C:\docs\essay.docx`,
+		`C:\docs\essay.v2`:      `C:\docs\essay.v2.docx`,
+		`/home/me/notes.backup`: `/home/me/notes.backup.docx`,
+	}
+	for in, want := range cases {
+		if got := withDocumentExtension(in); got != want {
+			t.Errorf("withDocumentExtension(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

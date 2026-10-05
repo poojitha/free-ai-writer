@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Editor } from '@tinymce/tinymce-react'
 import {
+  ChooseSavePath,
   ImproveText,
   GetDefaultOllamaSettings,
   OpenDocument,
-  SaveDocument,
+  WriteDocument,
 } from '../wailsjs/go/main/App'
 import { ClipboardSetText, WindowSetTitle } from '../wailsjs/runtime/runtime'
 import { useTheme } from './theme.js'
 import SettingsDialog from './SettingsDialog.jsx'
+import { exportDocument, formatFromPath, importDocument } from './documentFormats.js'
 import {
   fileName,
   findReplaceRange,
@@ -210,12 +212,20 @@ export default function App() {
 
   const dismissSuggestion = (id) => setSuggestions((prev) => prev.filter((s) => s.id !== id))
 
-  const save = useCallback(async () => {
+  // Saves to the current file, or asks where (and as which format: .docx by
+  // default, .txt or .html) for a new file or Save As.
+  const save = useCallback(async (saveAs = false) => {
     const editor = editorRef.current
     if (!editor) return
     try {
-      const path = await SaveDocument(docPath, editor.getContent())
+      const path = saveAs || !docPath ? await ChooseSavePath(docPath) : docPath
       if (!path) return
+      const data = await exportDocument(
+        formatFromPath(path),
+        editor.getContent(),
+        editor.getContent({ format: 'text' }),
+      )
+      await WriteDocument(path, data)
       setDocPath(path)
       setDirty(false)
       editor.setDirty(false)
@@ -231,7 +241,7 @@ export default function App() {
     try {
       const doc = await OpenDocument()
       if (!doc.path) return
-      editor.setContent(doc.content)
+      editor.setContent(await importDocument(doc.path, doc.data))
       editor.undoManager.clear()
       editor.setDirty(false)
       setDocPath(doc.path)
@@ -246,7 +256,7 @@ export default function App() {
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return
       const key = e.key.toLowerCase()
-      if (key === 's') { e.preventDefault(); save() }
+      if (key === 's') { e.preventDefault(); save(e.shiftKey) }
       if (key === 'o') { e.preventDefault(); open() }
     }
     window.addEventListener('keydown', onKey, true)
@@ -276,7 +286,12 @@ export default function App() {
           >
             {isDark ? <SunIcon /> : <MoonIcon />}
           </IconButton>
-          <IconButton label="Save (Ctrl+S)" onClick={save}><SaveIcon /></IconButton>
+          <IconButton
+            label="Save (Ctrl+S). Shift+click or Ctrl+Shift+S to save as Word, text or HTML"
+            onClick={(e) => save(e.shiftKey)}
+          >
+            <SaveIcon />
+          </IconButton>
           <IconButton label="Open (Ctrl+O)" onClick={open}><FolderIcon /></IconButton>
           <IconButton label="Settings" onClick={() => setSettingsOpen(true)}><SettingsIcon /></IconButton>
         </div>

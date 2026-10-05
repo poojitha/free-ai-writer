@@ -193,23 +193,37 @@ func (a *App) GetDefaultOllamaSettings() OllamaSettings {
 	}
 }
 
-// Document is a file opened from or saved to disk. Content is the editor's
-// HTML.
+// Document is a file opened from disk. Data is the raw file contents (sent
+// to the frontend as base64); the frontend converts it to editor HTML based
+// on the file's extension.
 type Document struct {
-	Path    string `json:"path"`
-	Content string `json:"content"`
+	Path string `json:"path"`
+	Data []byte `json:"data"`
 }
 
-var documentFilters = []runtime.FileFilter{
-	{DisplayName: "Documents (*.html)", Pattern: "*.html;*.htm"},
+// documentExtensions are the formats the frontend can read and write. The
+// first is the default for new files.
+var documentExtensions = []string{".docx", ".txt", ".html", ".htm"}
+
+// saveFilters lists Word first: on Windows, Wails makes the first filter's
+// extension the dialog's default, and Windows switches it to match whichever
+// type the user picks.
+var saveFilters = []runtime.FileFilter{
+	{DisplayName: "Word document (*.docx)", Pattern: "*.docx"},
+	{DisplayName: "Plain text (*.txt)", Pattern: "*.txt"},
+	{DisplayName: "Web page (*.html)", Pattern: "*.html;*.htm"},
 }
+
+var openFilters = append([]runtime.FileFilter{
+	{DisplayName: "All documents (*.docx, *.txt, *.html)", Pattern: "*.docx;*.txt;*.html;*.htm"},
+}, saveFilters...)
 
 // OpenDocument shows an open dialog and returns the chosen file. If the user
 // cancels, the returned Document has an empty Path.
 func (a *App) OpenDocument() (Document, error) {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title:   "Open document",
-		Filters: documentFilters,
+		Filters: openFilters,
 	})
 	if err != nil || path == "" {
 		return Document{}, err
@@ -219,29 +233,44 @@ func (a *App) OpenDocument() (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
-	return Document{Path: path, Content: string(data)}, nil
+	return Document{Path: path, Data: data}, nil
 }
 
-// SaveDocument writes content to path. If path is empty, a save dialog is
-// shown first. Returns the path written to, or "" if the user cancelled.
-func (a *App) SaveDocument(path, content string) (string, error) {
-	if path == "" {
-		var err error
-		path, err = runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-			Title:           "Save document",
-			DefaultFilename: "Untitled.html",
-			Filters:         documentFilters,
-		})
-		if err != nil || path == "" {
-			return "", err
-		}
-		if filepath.Ext(path) == "" {
-			path += ".html"
-		}
+// ChooseSavePath shows a save dialog, starting from currentPath's folder and
+// name if there is one, and returns the chosen path. The format is picked by
+// its extension. Returns "" if the user cancelled.
+func (a *App) ChooseSavePath(currentPath string) (string, error) {
+	options := runtime.SaveDialogOptions{
+		Title:           "Save document",
+		DefaultFilename: "Untitled",
+		Filters:         saveFilters,
+	}
+	if currentPath != "" {
+		options.DefaultDirectory = filepath.Dir(currentPath)
+		options.DefaultFilename = strings.TrimSuffix(filepath.Base(currentPath), filepath.Ext(currentPath))
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	path, err := runtime.SaveFileDialog(a.ctx, options)
+	if err != nil || path == "" {
 		return "", err
 	}
-	return path, nil
+	return withDocumentExtension(path), nil
+}
+
+// withDocumentExtension adds the default extension (.docx) unless path
+// already ends in a supported one.
+func withDocumentExtension(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, e := range documentExtensions {
+		if ext == e {
+			return path
+		}
+	}
+	return path + documentExtensions[0]
+}
+
+// WriteDocument writes data (already in the format matching path's
+// extension) to path.
+func (a *App) WriteDocument(path string, data []byte) error {
+	return os.WriteFile(path, data, 0o644)
 }

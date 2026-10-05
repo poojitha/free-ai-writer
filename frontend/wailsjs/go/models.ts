@@ -2,7 +2,7 @@ export namespace main {
 	
 	export class Document {
 	    path: string;
-	    content: string;
+	    data: number[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Document(source);
@@ -11,7 +11,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
-	        this.content = source["content"];
+	        this.data = source["data"];
 	    }
 	}
 	export class OllamaSettings {
