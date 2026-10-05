@@ -286,8 +286,8 @@ button {
 
 .assist {
   flex: 0 0 auto;
-  margin: 0 16px 16px;
-  padding: 14px 16px 16px;
+  margin: 0 16px 12px;
+  padding: 10px 14px 12px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -319,20 +319,20 @@ button {
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .chip {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 7px 18px 7px 7px;
+  gap: 10px;
+  padding: 5px 14px 5px 5px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   box-shadow: var(--shadow);
-  font-size: 14px;
+  font-size: 13.5px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s;
 }
@@ -349,9 +349,9 @@ button {
 .chip-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
 .tint-blue   { background: var(--tint-blue-bg);   color: var(--tint-blue-fg); }

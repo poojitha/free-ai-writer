@@ -564,7 +564,7 @@ export default function App() {
 
       <footer className="assist">
         <div className="assist-head">
-          <span className="assist-sparkle"><SparkleIcon /></span>
+          <span className="assist-sparkle"><SparkleIcon size={18} /></span>
           <span>AI-Powered Suggestions</span>
           <span
             className="assist-info"
@@ -600,7 +600,7 @@ export default function App() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => runAction(action)}
             >
-              <span className={`chip-icon tint-${action.tint}`}><action.Icon /></span>
+              <span className={`chip-icon tint-${action.tint}`}><action.Icon size={17} /></span>
               {action.label}
             </button>
           ))}
