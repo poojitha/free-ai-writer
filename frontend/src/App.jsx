@@ -3,7 +3,7 @@ import { Editor } from '@tinymce/tinymce-react'
 import {
   ChooseSavePath,
   ImproveText,
-  GetDefaultOllamaSettings,
+  GetDefaultSettings,
   OpenDocument,
   WriteDocument,
 } from '../wailsjs/go/main/App'
@@ -23,6 +23,7 @@ import {
   ACTIONS,
   DEFAULT_SUGGESTION_HEIGHT,
   SUGGESTION_HEIGHT_STORAGE_KEY,
+  activeAIConfig,
   clampSuggestionHeight,
   loadStoredSettings,
   resolveActionPrompt,
@@ -169,7 +170,7 @@ export default function App() {
 
     const settings = loadStoredSettings() || {}
     try {
-      const improved = await ImproveText(target.text, settings.host || '', settings.model || '', prompt)
+      const improved = await ImproveText(target.text, prompt, activeAIConfig(settings))
       updateSuggestion(id, { improved, loading: false })
     } catch (err) {
       updateSuggestion(id, { error: String(err), loading: false })
@@ -188,7 +189,7 @@ export default function App() {
     // Capture the target before awaiting, while the selection is current.
     const target = getActionTarget(editor)
     if (!target) return
-    const prompt = await resolveActionPrompt(action.id, loadStoredSettings() || {}, GetDefaultOllamaSettings)
+    const prompt = await resolveActionPrompt(action.id, loadStoredSettings() || {}, GetDefaultSettings)
     runSuggestion(target, action.label, prompt)
   }
 

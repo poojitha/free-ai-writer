@@ -4,9 +4,9 @@ import {main} from '../models';
 
 export function ChooseSavePath(arg1:string):Promise<string>;
 
-export function GetDefaultOllamaSettings():Promise<main.OllamaSettings>;
+export function GetDefaultSettings():Promise<main.DefaultSettings>;
 
-export function ImproveText(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+export function ImproveText(arg1:string,arg2:string,arg3:main.AIConfig):Promise<string>;
 
 export function OpenDocument():Promise<main.Document>;
 

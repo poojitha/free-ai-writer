@@ -44,7 +44,7 @@ func ollamaReply(text string) string {
 func TestImproveTextSendsPromptAndText(t *testing.T) {
 	srv, got := fakeOllama(t, http.StatusOK, ollamaReply("  Cats are nice.  "))
 
-	improved, err := newTestApp().ImproveText("cats is nice", srv.URL+"/", "test-model", "Fix it.")
+	improved, err := newTestApp().ImproveText("cats is nice", "Fix it.", AIConfig{Host: srv.URL + "/", Model: "test-model"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestImproveTextSendsPromptAndText(t *testing.T) {
 func TestImproveTextUsesDefaultModelAndPrompt(t *testing.T) {
 	srv, got := fakeOllama(t, http.StatusOK, ollamaReply("ok"))
 
-	if _, err := newTestApp().ImproveText("text", srv.URL, " ", ""); err != nil {
+	if _, err := newTestApp().ImproveText("text", "", AIConfig{Host: srv.URL, Model: " "}); err != nil {
 		t.Fatal(err)
 	}
 	if got.Model != defaultOllamaModel {
@@ -76,7 +76,7 @@ func TestImproveTextUsesDefaultModelAndPrompt(t *testing.T) {
 func TestImproveTextStripsPreamble(t *testing.T) {
 	srv, _ := fakeOllama(t, http.StatusOK, ollamaReply("Here is the improved text:\n\nCats are nice."))
 
-	improved, err := newTestApp().ImproveText("cats is nice", srv.URL, "", "")
+	improved, err := newTestApp().ImproveText("cats is nice", "", AIConfig{Host: srv.URL})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,14 +87,14 @@ func TestImproveTextStripsPreamble(t *testing.T) {
 
 func TestImproveTextErrors(t *testing.T) {
 	t.Run("empty text", func(t *testing.T) {
-		if _, err := newTestApp().ImproveText("  \n", "http://unused", "", ""); err == nil {
+		if _, err := newTestApp().ImproveText("  \n", "", AIConfig{Host: "http://unused"}); err == nil {
 			t.Error("want an error")
 		}
 	})
 
 	t.Run("non-200 status", func(t *testing.T) {
 		srv, _ := fakeOllama(t, http.StatusNotFound, `{"error":"model not found"}`)
-		_, err := newTestApp().ImproveText("text", srv.URL, "", "")
+		_, err := newTestApp().ImproveText("text", "", AIConfig{Host: srv.URL})
 		if err == nil || !strings.Contains(err.Error(), "404") || !strings.Contains(err.Error(), "model not found") {
 			t.Errorf("err = %v", err)
 		}
@@ -102,7 +102,7 @@ func TestImproveTextErrors(t *testing.T) {
 
 	t.Run("empty response", func(t *testing.T) {
 		srv, _ := fakeOllama(t, http.StatusOK, ollamaReply("Here is the improved text:"))
-		if _, err := newTestApp().ImproveText("text", srv.URL, "", ""); err == nil {
+		if _, err := newTestApp().ImproveText("text", "", AIConfig{Host: srv.URL}); err == nil {
 			t.Error("want an error")
 		}
 	})
@@ -111,8 +111,146 @@ func TestImproveTextErrors(t *testing.T) {
 		srv, _ := fakeOllama(t, http.StatusOK, "")
 		url := srv.URL
 		srv.Close()
-		_, err := newTestApp().ImproveText("text", url, "", "")
+		_, err := newTestApp().ImproveText("text", "", AIConfig{Host: url})
 		if err == nil || !strings.Contains(err.Error(), "could not reach Ollama") {
+			t.Errorf("err = %v", err)
+		}
+	})
+}
+
+// fakeProvider serves path, records the request's headers and decoded JSON
+// body, and replies with the given status and body.
+func fakeProvider(t *testing.T, path string, status int, body string) (*httptest.Server, *http.Header, *map[string]any) {
+	t.Helper()
+	var header http.Header
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != path || r.Method != http.MethodPost {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		header = r.Header.Clone()
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Errorf("decoding request: %v", err)
+		}
+		w.WriteHeader(status)
+		w.Write([]byte(body))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &header, &got
+}
+
+// userMessage returns the content of the single user message in a
+// chat-style request body.
+func userMessage(t *testing.T, body map[string]any) string {
+	t.Helper()
+	msgs, _ := body["messages"].([]any)
+	if len(msgs) != 1 {
+		t.Fatalf("messages = %v", body["messages"])
+	}
+	m := msgs[0].(map[string]any)
+	if m["role"] != "user" {
+		t.Errorf("role = %v", m["role"])
+	}
+	content, _ := m["content"].(string)
+	return content
+}
+
+func TestImproveTextOpenAI(t *testing.T) {
+	srv, header, got := fakeProvider(t, "/v1/chat/completions", http.StatusOK,
+		`{"choices":[{"message":{"role":"assistant","content":"Cats are nice."}}]}`)
+
+	improved, err := newTestApp().ImproveText("cats is nice", "Fix it.",
+		AIConfig{Provider: "openai", Host: srv.URL + "/v1", Model: "gpt-test", APIKey: " sk-1 "})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if improved != "Cats are nice." {
+		t.Errorf("improved = %q", improved)
+	}
+	if h := header.Get("Authorization"); h != "Bearer sk-1" {
+		t.Errorf("Authorization = %q", h)
+	}
+	if (*got)["model"] != "gpt-test" {
+		t.Errorf("model = %v", (*got)["model"])
+	}
+	if msg := userMessage(t, *got); msg != "Fix it.\n\nText:\n cats is nice" {
+		t.Errorf("message = %q", msg)
+	}
+}
+
+func TestImproveTextAnthropic(t *testing.T) {
+	srv, header, got := fakeProvider(t, "/v1/messages", http.StatusOK,
+		`{"content":[{"type":"text","text":"Cats "},{"type":"text","text":"are nice."}]}`)
+
+	improved, err := newTestApp().ImproveText("cats is nice", "Fix it.",
+		AIConfig{Provider: "anthropic", Host: srv.URL, APIKey: "key-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if improved != "Cats are nice." {
+		t.Errorf("improved = %q", improved)
+	}
+	if header.Get("x-api-key") != "key-1" || header.Get("anthropic-version") == "" {
+		t.Errorf("headers = %v", *header)
+	}
+	if (*got)["model"] != providers["anthropic"].defaults.Model || (*got)["max_tokens"] == nil {
+		t.Errorf("request = %v", *got)
+	}
+	if msg := userMessage(t, *got); msg != "Fix it.\n\nText:\n cats is nice" {
+		t.Errorf("message = %q", msg)
+	}
+}
+
+func TestImproveTextCustomProvider(t *testing.T) {
+	srv, header, got := fakeProvider(t, "/api/v1/chat/completions", http.StatusOK,
+		`{"choices":[{"message":{"role":"assistant","content":"Cats are nice."}}]}`)
+
+	improved, err := newTestApp().ImproveText("cats is nice", "Fix it.",
+		AIConfig{Provider: "custom", Host: srv.URL + "/api/v1/", Model: "my-model"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if improved != "Cats are nice." {
+		t.Errorf("improved = %q", improved)
+	}
+	if h := header.Get("Authorization"); h != "" {
+		t.Errorf("Authorization = %q, want none without a key", h)
+	}
+	if (*got)["model"] != "my-model" {
+		t.Errorf("model = %v", (*got)["model"])
+	}
+}
+
+func TestImproveTextProviderErrors(t *testing.T) {
+	t.Run("custom provider without host or model", func(t *testing.T) {
+		for _, cfg := range []AIConfig{
+			{Provider: "custom", Model: "m"},
+			{Provider: "custom", Host: "http://unused"},
+		} {
+			_, err := newTestApp().ImproveText("text", "", cfg)
+			if err == nil || !strings.Contains(err.Error(), "API URL and model") {
+				t.Errorf("%+v: err = %v", cfg, err)
+			}
+		}
+	})
+
+	t.Run("missing API key", func(t *testing.T) {
+		_, err := newTestApp().ImproveText("text", "", AIConfig{Provider: "openai", Host: "http://unused"})
+		if err == nil || !strings.Contains(err.Error(), "OpenAI API key") {
+			t.Errorf("err = %v", err)
+		}
+	})
+
+	t.Run("unknown provider", func(t *testing.T) {
+		if _, err := newTestApp().ImproveText("text", "", AIConfig{Provider: "nope"}); err == nil {
+			t.Error("want an error")
+		}
+	})
+
+	t.Run("error status names the provider", func(t *testing.T) {
+		srv, _, _ := fakeProvider(t, "/v1/messages", http.StatusUnauthorized, `{"error":{"message":"invalid x-api-key"}}`)
+		_, err := newTestApp().ImproveText("text", "", AIConfig{Provider: "anthropic", Host: srv.URL, APIKey: "bad"})
+		if err == nil || !strings.Contains(err.Error(), "Anthropic returned 401") || !strings.Contains(err.Error(), "invalid x-api-key") {
 			t.Errorf("err = %v", err)
 		}
 	})
@@ -140,10 +278,18 @@ func TestCleanResponse(t *testing.T) {
 	}
 }
 
-func TestGetDefaultOllamaSettings(t *testing.T) {
-	s := newTestApp().GetDefaultOllamaSettings()
-	if s.Host != defaultOllamaHost || s.Model != defaultOllamaModel || s.Prompt != defaultPrompt {
-		t.Errorf("settings = %+v", s)
+func TestGetDefaultSettings(t *testing.T) {
+	s := newTestApp().GetDefaultSettings()
+	if s.Prompt != defaultPrompt {
+		t.Errorf("prompt = %q", s.Prompt)
+	}
+	if got := s.Providers["ollama"]; got.Host != defaultOllamaHost || got.Model != defaultOllamaModel {
+		t.Errorf("ollama defaults = %+v", got)
+	}
+	for id, p := range s.Providers {
+		if id != "custom" && (p.Host == "" || p.Model == "") {
+			t.Errorf("provider %q has empty defaults: %+v", id, p)
+		}
 	}
 	for id, p := range s.ActionPrompts {
 		if strings.TrimSpace(p) == "" {
@@ -152,26 +298,49 @@ func TestGetDefaultOllamaSettings(t *testing.T) {
 	}
 }
 
-// Every frontend action except "improve" (which uses defaultPrompt) needs a
-// default prompt here, and vice versa. The ids are read from settings.js,
+// frontendIDs returns the sorted ids in the named array in settings.js,
 // where they're written as `id: '<id>'`.
-func TestActionPromptsMatchFrontendActions(t *testing.T) {
+func frontendIDs(t *testing.T, name string) []string {
+	t.Helper()
 	src, err := os.ReadFile(filepath.Join("frontend", "src", "settings.js"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var frontend []string
-	for _, m := range regexp.MustCompile(`id: '(\w+)'`).FindAllStringSubmatch(string(src), -1) {
-		frontend = append(frontend, m[1])
+	block := regexp.MustCompile(`(?s)export const ` + name + ` = \[(.*?)\n\]`).FindStringSubmatch(string(src))
+	if block == nil {
+		t.Fatalf("%s not found in settings.js", name)
 	}
-	var backend []string
-	for id := range defaultActionPrompts {
-		backend = append(backend, id)
+	var ids []string
+	for _, m := range regexp.MustCompile(`id: '(\w+)'`).FindAllStringSubmatch(block[1], -1) {
+		ids = append(ids, m[1])
 	}
-	sort.Strings(frontend)
-	sort.Strings(backend)
+	sort.Strings(ids)
+	return ids
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// Every frontend action except "improve" (which uses defaultPrompt and is
+// written as `id: IMPROVE_ID`) needs a default prompt here, and vice versa.
+func TestActionPromptsMatchFrontendActions(t *testing.T) {
+	frontend, backend := frontendIDs(t, "ACTIONS"), sortedKeys(defaultActionPrompts)
 	if strings.Join(frontend, ",") != strings.Join(backend, ",") {
 		t.Errorf("frontend action ids %v != Go defaultActionPrompts keys %v", frontend, backend)
+	}
+}
+
+// The frontend's PROVIDERS must match the Go providers.
+func TestProvidersMatchFrontend(t *testing.T) {
+	frontend, backend := frontendIDs(t, "PROVIDERS"), sortedKeys(providers)
+	if strings.Join(frontend, ",") != strings.Join(backend, ",") {
+		t.Errorf("frontend provider ids %v != Go providers %v", frontend, backend)
 	}
 }
 

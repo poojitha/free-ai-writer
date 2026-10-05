@@ -2,16 +2,22 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   ACTIONS,
   IMPROVE_ID,
+  PROVIDERS,
   SETTINGS_STORAGE_KEY,
+  activeAIConfig,
   clampSuggestionHeight,
   loadStoredSettings,
+  providerFields,
   resolveActionPrompt,
   toStoredSettings,
 } from './settings.js'
 
 const defaults = {
-  host: 'http://localhost:11434',
-  model: 'llama3.1:8b',
+  providers: {
+    ollama: { host: 'http://localhost:11434', model: 'llama3.1:8b' },
+    openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
+    anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
+  },
   prompt: 'default improve',
   actionPrompts: { concise: 'default concise', grammar: 'default grammar' },
 }
@@ -41,28 +47,60 @@ describe('toStoredSettings', () => {
   it('stores only prompts that differ from the defaults', () => {
     const stored = toStoredSettings(
       {
-        host: 'h',
-        model: 'm',
+        provider: 'openai',
+        providers: { openai: { host: 'h', model: 'm', apiKey: 'k' } },
         prompt: 'default improve',
         actionPrompts: { concise: 'my concise', grammar: 'default grammar' },
       },
       defaults,
     )
-    expect(stored).toEqual({ host: 'h', model: 'm', prompt: undefined, actionPrompts: { concise: 'my concise' } })
+    expect(stored).toEqual({
+      provider: 'openai',
+      providers: { openai: { host: 'h', model: 'm', apiKey: 'k' } },
+      prompt: undefined,
+      actionPrompts: { concise: 'my concise' },
+    })
   })
 
   it('keeps an edited Enter prompt', () => {
-    const stored = toStoredSettings({ host: '', model: '', prompt: 'mine', actionPrompts: {} }, defaults)
+    const stored = toStoredSettings({ provider: 'ollama', providers: {}, prompt: 'mine', actionPrompts: {} }, defaults)
     expect(stored.prompt).toBe('mine')
   })
 
   it('treats a blank prompt as "use the default"', () => {
     const stored = toStoredSettings(
-      { host: '', model: '', prompt: '   ', actionPrompts: { concise: '' } },
+      { provider: 'ollama', providers: {}, prompt: '   ', actionPrompts: { concise: '' } },
       defaults,
     )
     expect(stored.prompt).toBeUndefined()
     expect(stored.actionPrompts).toEqual({})
+  })
+})
+
+describe('providerFields', () => {
+  it('fills every provider from stored values over the defaults', () => {
+    const fields = providerFields({ providers: { anthropic: { apiKey: 'k', model: 'claude-x' } } }, defaults)
+    expect(Object.keys(fields)).toEqual(PROVIDERS.map((p) => p.id))
+    expect(fields.anthropic).toEqual({ host: 'https://api.anthropic.com', model: 'claude-x', apiKey: 'k' })
+    expect(fields.ollama).toEqual({ host: 'http://localhost:11434', model: 'llama3.1:8b', apiKey: '' })
+  })
+
+  it("reads Ollama's host and model from the old top-level fields", () => {
+    const fields = providerFields({ host: 'http://other:1', model: 'qwen3:4b' }, defaults)
+    expect(fields.ollama).toEqual({ host: 'http://other:1', model: 'qwen3:4b', apiKey: '' })
+    expect(fields.openai.model).toBe('gpt-5-mini')
+  })
+})
+
+describe('activeAIConfig', () => {
+  it('returns the selected provider and its fields', () => {
+    const stored = { provider: 'openai', providers: { openai: { host: 'h', model: 'm', apiKey: 'k' } } }
+    expect(activeAIConfig(stored)).toEqual({ provider: 'openai', host: 'h', model: 'm', apiKey: 'k' })
+  })
+
+  it('defaults to Ollama, including old-style settings, with blanks for the Go defaults', () => {
+    expect(activeAIConfig({})).toEqual({ provider: 'ollama', host: '', model: '', apiKey: '' })
+    expect(activeAIConfig({ model: 'qwen3:4b' })).toEqual({ provider: 'ollama', host: '', model: 'qwen3:4b', apiKey: '' })
   })
 })
 

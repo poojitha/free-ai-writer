@@ -6,12 +6,12 @@ export function ChooseSavePath(arg1) {
   return window['go']['main']['App']['ChooseSavePath'](arg1);
 }
 
-export function GetDefaultOllamaSettings() {
-  return window['go']['main']['App']['GetDefaultOllamaSettings']();
+export function GetDefaultSettings() {
+  return window['go']['main']['App']['GetDefaultSettings']();
 }
 
-export function ImproveText(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['ImproveText'](arg1, arg2, arg3, arg4);
+export function ImproveText(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ImproveText'](arg1, arg2, arg3);
 }
 
 export function OpenDocument() {

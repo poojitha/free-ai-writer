@@ -10,6 +10,8 @@
   --panel: #f6f6f7;
   --border: #e8e7e4;
   --border-strong: #d9d8d4;
+  --scrollbar: #c9c8c3;
+  --scrollbar-hover: #a9a8a3;
   --text: #1c1d22;
   --text-muted: #6b6c74;
   --text-faint: #9a9ba3;
@@ -35,6 +37,8 @@
   --panel: #1d1d21;
   --border: #2e2e34;
   --border-strong: #3b3b42;
+  --scrollbar: #4a4a52;
+  --scrollbar-hover: #64646e;
   --text: #e9e9ec;
   --text-muted: #a2a2ab;
   --text-faint: #6f6f78;
@@ -404,6 +408,26 @@ body.resizing {
   overflow-y: auto;
 }
 
+/* An always-visible scrollbar: WebView2's default overlay one only shows on
+   hover and is hard to see against the panel. */
+.suggestion-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.suggestion-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.suggestion-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border: 2px solid var(--panel);
+  border-radius: 6px;
+}
+
+.suggestion-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover);
+}
+
 .suggestion-card {
   flex: 0 0 auto;
   padding: 10px 14px 12px;
@@ -528,6 +552,12 @@ body.resizing {
   filter: brightness(1.08);
 }
 
+.text-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ---- Settings dialog ---- */
 
 .dialog-backdrop {
@@ -621,6 +651,37 @@ body.resizing {
 .settings-hint {
   font-weight: 400;
   color: var(--text-faint);
+}
+
+.settings-input + .settings-hint {
+  display: block;
+  margin-top: 4px;
+}
+
+.settings-select {
+  cursor: pointer;
+}
+
+.dialog-foot {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 8px -24px -12px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.dialog-foot .text-button {
+  padding: 6px 18px;
+}
+
+.provider-hint {
+  margin: -6px 0 14px;
+  font-size: 12px;
 }
 
 .settings-input {

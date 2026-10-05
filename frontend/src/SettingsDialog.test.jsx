@@ -5,13 +5,16 @@ import SettingsDialog from './SettingsDialog.jsx'
 import { SETTINGS_STORAGE_KEY } from './settings.js'
 
 vi.mock('../wailsjs/go/main/App', () => ({
-  GetDefaultOllamaSettings: vi.fn(),
+  GetDefaultSettings: vi.fn(),
 }))
-const { GetDefaultOllamaSettings } = await import('../wailsjs/go/main/App')
+const { GetDefaultSettings } = await import('../wailsjs/go/main/App')
 
 const defaults = {
-  host: 'http://localhost:11434',
-  model: 'llama3.1:8b',
+  providers: {
+    ollama: { host: 'http://localhost:11434', model: 'llama3.1:8b' },
+    openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
+    anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
+  },
   prompt: 'default improve',
   actionPrompts: {
     concise: 'default concise',
@@ -30,7 +33,7 @@ function renderDialog(props = {}) {
 }
 
 beforeEach(() => {
-  GetDefaultOllamaSettings.mockResolvedValue(defaults)
+  GetDefaultSettings.mockResolvedValue(defaults)
 })
 
 describe('SettingsDialog', () => {
@@ -41,13 +44,78 @@ describe('SettingsDialog', () => {
     expect(screen.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('saves an edited model', async () => {
+  it('saves an edited model only when Save is clicked', async () => {
     const user = userEvent.setup()
     renderDialog()
     const model = await screen.findByDisplayValue('llama3.1:8b')
+    const save = screen.getByRole('button', { name: 'Save' })
+    expect(save).toBeDisabled()
+
     await user.clear(model)
     await user.type(model, 'qwen3:4b')
-    expect(stored().model).toBe('qwen3:4b')
+    expect(stored()).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes')
+
+    await user.click(save)
+    expect(stored().providers.ollama.model).toBe('qwen3:4b')
+    expect(screen.getByRole('status')).toHaveTextContent('Saved')
+    expect(save).toBeDisabled()
+  })
+
+  it('discards unsaved edits when closed', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderDialog()
+    await user.type(await screen.findByDisplayValue('llama3.1:8b'), '-x')
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalled()
+    expect(stored()).toBeNull()
+  })
+
+  it('switches provider from the dropdown and keeps a separate model and API key for each', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    await screen.findByDisplayValue('llama3.1:8b')
+    const providerSelect = screen.getByRole('combobox', { name: 'AI provider' })
+    expect(providerSelect).toHaveValue('ollama')
+    expect(screen.queryByLabelText(/^API key/)).not.toBeInTheDocument()
+
+    await user.selectOptions(providerSelect, 'Claude (Anthropic)')
+    expect(screen.getByLabelText('Anthropic API URL')).toHaveValue('https://api.anthropic.com')
+    expect(screen.getByLabelText('Model')).toHaveValue('claude-sonnet-5-5')
+    await user.type(screen.getByLabelText(/^API key/), 'sk-ant-1')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(stored().provider).toBe('anthropic')
+    expect(stored().providers.anthropic.apiKey).toBe('sk-ant-1')
+    expect(stored().providers.ollama.model).toBe('llama3.1:8b')
+
+    await user.selectOptions(providerSelect, 'ChatGPT (OpenAI)')
+    expect(screen.getByLabelText(/^API key/)).toHaveValue('')
+    await user.selectOptions(providerSelect, 'Claude (Anthropic)')
+    expect(screen.getByLabelText(/^API key/)).toHaveValue('sk-ant-1')
+  })
+
+  it('offers Other for any OpenAI-compatible API, with no defaults and an optional key', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    await screen.findByDisplayValue('llama3.1:8b')
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'AI provider' }), 'Other (OpenAI-compatible)')
+    expect(screen.getByText(/Any OpenAI-compatible API/)).toBeInTheDocument()
+    const url = screen.getByLabelText('API URL')
+    expect(url).toHaveValue('')
+    expect(screen.getByLabelText('Model')).toHaveValue('')
+    expect(screen.getByLabelText(/^API key \(if the server needs one\)/)).toHaveValue('')
+
+    await user.type(url, 'https://openrouter.ai/api/v1')
+    await user.type(screen.getByLabelText('Model'), 'meta-llama/llama-3.1-8b-instruct')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(stored().provider).toBe('custom')
+    expect(stored().providers.custom).toEqual({
+      host: 'https://openrouter.ai/api/v1',
+      model: 'meta-llama/llama-3.1-8b-instruct',
+      apiKey: '',
+    })
   })
 
   it('reports theme changes', async () => {
@@ -81,10 +149,12 @@ describe('SettingsDialog', () => {
     const grammar = screen.getByLabelText('Fix grammar')
     await user.clear(grammar)
     await user.type(grammar, 'Only fix spelling.')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(stored().actionPrompts).toEqual({ grammar: 'Only fix spelling.' })
 
     await user.click(screen.getByRole('button', { name: 'Reset' }))
     expect(grammar).toHaveValue('default grammar')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(stored().actionPrompts).toEqual({})
   })
 
