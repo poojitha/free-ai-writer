@@ -30,11 +30,13 @@ const SETTINGS_STORAGE_KEY = 'ollamaSettings'
 // Suggestion bar actions. Each runs on the selection, or on the paragraph the
 // caret is in when nothing is selected. Default prompts come from Go
 // (GetDefaultOllamaSettings().actionPrompts, keyed by id); user edits are
-// stored as overrides under ollamaSettings.actionPrompts.
+// stored as overrides under ollamaSettings.actionPrompts. The exception is
+// IMPROVE_ID, which shares the Enter-key prompt (ollamaSettings.prompt).
+const IMPROVE_ID = 'improve'
 const ACTIONS = [
   {
-    id: 'clarify',
-    label: 'Clarify this sentence',
+    id: IMPROVE_ID,
+    label: 'Improve writing',
     Icon: DocIcon,
     tint: 'blue',
   },
@@ -211,14 +213,20 @@ function SettingsDialog({ themePreference, onThemeChange, onClose }) {
 
   useEffect(() => {
     if (!defaults) return
-    // Only keep action prompts the user changed, so improved defaults still
-    // reach everyone else.
+    // Only keep prompts the user changed, so improved defaults still reach
+    // everyone else.
+    const isOverride = (p, def) => p.trim() && p !== def
     const overrides = Object.fromEntries(
-      Object.entries(actionPrompts).filter(([id, p]) => p.trim() && p !== defaults.actionPrompts[id]),
+      Object.entries(actionPrompts).filter(([id, p]) => isOverride(p, defaults.actionPrompts[id])),
     )
     localStorage.setItem(
       SETTINGS_STORAGE_KEY,
-      JSON.stringify({ host, model, prompt, actionPrompts: overrides }),
+      JSON.stringify({
+        host,
+        model,
+        prompt: isOverride(prompt, defaults.prompt) ? prompt : undefined,
+        actionPrompts: overrides,
+      }),
     )
   }, [host, model, prompt, actionPrompts, defaults])
 
@@ -300,17 +308,19 @@ function SettingsDialog({ themePreference, onThemeChange, onClose }) {
 
         {tab === 'prompts' && (
           <div className="settings-section">
-            <PromptField
-              id="improve"
-              label="Improve prompt"
-              hint={<>used when you press <kbd><EnterIcon size={12} /> Enter</kbd></>}
-              Icon={EnterIcon}
-              tint="neutral"
-              value={prompt}
-              defaultValue={defaults?.prompt}
-              onChange={setPrompt}
-            />
-            {ACTIONS.map(({ id, label, Icon, tint }) => (
+            {ACTIONS.map(({ id, label, Icon, tint }) => id === IMPROVE_ID ? (
+              <PromptField
+                key={id}
+                id={id}
+                label={label}
+                hint={<>also runs when you press <kbd><EnterIcon size={12} /> Enter</kbd></>}
+                Icon={Icon}
+                tint={tint}
+                value={prompt}
+                defaultValue={defaults?.prompt}
+                onChange={setPrompt}
+              />
+            ) : (
               <PromptField
                 key={id}
                 id={id}
@@ -369,7 +379,7 @@ export default function App() {
   // through a ref to always call the latest version.
   const improveLineRef = useRef(null)
   improveLineRef.current = (target) =>
-    runSuggestion(target, 'Improve', (loadStoredSettings() || {}).prompt || '')
+    runSuggestion(target, 'Improve writing', (loadStoredSettings() || {}).prompt || '')
 
   const runAction = async (action) => {
     const editor = editorRef.current
@@ -377,8 +387,11 @@ export default function App() {
     // Capture the target before awaiting, while the selection is current.
     const target = getActionTarget(editor)
     if (!target) return
-    const override = (loadStoredSettings() || {}).actionPrompts?.[action.id]
-    const prompt = override || (await GetDefaultOllamaSettings()).actionPrompts[action.id]
+    const stored = loadStoredSettings() || {}
+    // An empty prompt makes ImproveText use the Go default.
+    const prompt = action.id === IMPROVE_ID
+      ? stored.prompt || ''
+      : stored.actionPrompts?.[action.id] || (await GetDefaultOllamaSettings()).actionPrompts[action.id]
     runSuggestion(target, action.label, prompt)
   }
 

@@ -17,9 +17,11 @@ import (
 const (
 	defaultOllamaHost  = "http://localhost:11434"
 	defaultOllamaModel = "llama3.1:8b"
-	defaultPrompt      = "Improve the writing quality of the following text. Fix grammar, " +
-		"clarity, and flow, but preserve the original meaning. Return only the " +
-		"improved text, with no preamble or explanation."
+	// Used both when pressing Enter and by the "Improve writing" action.
+	defaultPrompt = "Improve the following text so it is clear and reads smoothly. " +
+		"Fix grammar, simplify confusing or awkward phrasing, and improve flow, " +
+		"while keeping the original meaning and voice. Return only the improved " +
+		"text, with no preamble or explanation."
 )
 
 type ollamaGenerateRequest struct {
@@ -126,9 +128,9 @@ func (a *App) ImproveText(text, host, model, prompt string) (string, error) {
 const returnOnly = " Return only the rewritten text, with no preamble or explanation."
 
 // defaultActionPrompts are the prompts for the suggestion bar actions, keyed
-// by the action ids the frontend uses.
+// by the action ids the frontend uses. The "improve" action uses
+// defaultPrompt instead.
 var defaultActionPrompts = map[string]string{
-	"clarify": "Rewrite the following text so it is clearer and easier to understand, keeping its meaning." + returnOnly,
 	"concise": "Rewrite the following text to be more concise. Remove filler and redundancy but keep every idea." + returnOnly,
 	"tone":    "Rewrite the following text with a warmer, more natural and engaging tone, keeping its meaning." + returnOnly,
 	"expand":  "Expand the following text with more detail, examples, or depth, in the same voice and style." + returnOnly,
