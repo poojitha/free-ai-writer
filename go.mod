@@ -1,4 +1,4 @@
-module chromebox
+module hushwriter
 
 go 1.26
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-"Write" — a desktop writing app built with **Wails v2** (Go backend + React/Vite frontend). The user writes in a TinyMCE rich-text editor; an "Improve" panel sends the plain text to an AI provider — a **local Ollama** server (the default), **OpenAI** (ChatGPT, or any OpenAI-compatible server) or **Anthropic** (Claude) or any other OpenAI-compatible API ("Other") — and shows the rewritten result. The Go module and binary are named `chromebox` (see `go.mod`, `wails.json`), though the window title is "Write".
+"Hush Writer" — a desktop writing app built with **Wails v2** (Go backend + React/Vite frontend). The user writes in a TinyMCE rich-text editor; an "Improve" panel sends the plain text to an AI provider — a **local Ollama** server (the default), **OpenAI** (ChatGPT, or any OpenAI-compatible server) or **Anthropic** (Claude) or any other OpenAI-compatible API ("Other") — and shows the rewritten result. The Go module is `hushwriter` (`go.mod`) and the binary `hush-writer` (`wails.json`); the window title is "Hush Writer".
 
 ## Commands
 
