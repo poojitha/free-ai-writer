@@ -401,20 +401,20 @@
           <li><strong>Download Ollama</strong>Go to <a href="https://ollama.com/download">ollama.com/download</a>, choose <em>Windows</em> and download the installer.</li>
           <li><strong>Install it</strong>Run the installer and follow the prompts. When it finishes, Ollama starts in the background. You'll see its llama icon in the system tray, near the clock.</li>
           <li><strong>Open a terminal</strong>Press the <kbd>Windows</kbd> key, type <em>PowerShell</em> and press <kbd>Enter</kbd>.</li>
-          <li><strong>Download the AI model</strong>Type this command and press <kbd>Enter</kbd>. The model is about 5 GB, so this may take a while.
-            <pre class="cmd">ollama pull llama3.1:8b</pre>
+          <li><strong>Download the AI model</strong>Type this command and press <kbd>Enter</kbd>. The model is about 2 GB, so this may take a few minutes.
+            <pre class="cmd">ollama pull qwen2.5:3b</pre>
           </li>
-          <li><strong>Start Hush Writer</strong>That's it. Hush Writer already uses Ollama's standard address (<code>http://localhost:11434</code>) and the <code>llama3.1:8b</code> model, so there's nothing to change in Settings.</li>
+          <li><strong>Start Hush Writer</strong>That's it. Hush Writer already uses Ollama's standard address (<code>http://localhost:11434</code>) and the <code>qwen2.5:3b</code> model, so there's nothing to change in Settings.</li>
         </ol>
         <div class="callout tip">
           <strong>What kind of computer do I need?</strong>
-          <p>At least 8 GB of memory (16 GB is more comfortable) and about 6 GB of free disk space. A graphics card makes suggestions much faster, but isn't required.</p>
+          <p>At least 8 GB of memory and about 3 GB of free disk space. A graphics card makes suggestions much faster, but isn't required.</p>
         </div>
         <div class="callout">
           <strong>Suggestions not working?</strong>
           <ul>
             <li><strong>Make sure Ollama is running.</strong> Look for the llama icon in the system tray. If it isn't there, open Ollama from the Start menu.</li>
-            <li><strong>Check the model is downloaded.</strong> Run <code>ollama list</code> in PowerShell. You should see <code>llama3.1:8b</code>.</li>
+            <li><strong>Check the model is downloaded.</strong> Run <code>ollama list</code> in PowerShell. You should see <code>qwen2.5:3b</code>.</li>
             <li><strong>Using a different model?</strong> Enter its name in Hush Writer's Settings, exactly as <code>ollama list</code> shows it.</li>
           </ul>
         </div>

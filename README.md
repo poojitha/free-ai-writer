@@ -22,7 +22,7 @@ Built with [Wails v2](https://wails.io) (Go backend) and React + [TinyMCE](https
 - [Ollama](https://ollama.com) running locally, with a model pulled:
 
   ```sh
-  ollama pull llama3.1:8b
+  ollama pull qwen2.5:3b
   ```
 
 ## Development
@@ -64,7 +64,7 @@ Open the **Settings** tab to change:
 | Setting     | Default                  |
 |-------------|--------------------------|
 | Ollama host | `http://localhost:11434` |
-| Model       | `llama3.1:8b`            |
+| Model       | `qwen2.5:3b`            |
 | Prompt      | See below                |
 
 The default prompt is:

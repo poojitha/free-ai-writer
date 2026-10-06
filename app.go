@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultOllamaHost  = "http://localhost:11434"
-	defaultOllamaModel = "llama3.1:8b"
+	defaultOllamaModel = "qwen2.5:3b"
 	// Used both when pressing Enter and by the "Improve writing" action.
 	defaultPrompt = "Improve the following text so it is clear and reads smoothly. " +
 		"Fix grammar, simplify confusing or awkward phrasing, and improve flow, " +

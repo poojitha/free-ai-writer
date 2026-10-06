@@ -11,7 +11,7 @@ const { GetDefaultSettings } = await import('../wailsjs/go/main/App')
 
 const defaults = {
   providers: {
-    ollama: { host: 'http://localhost:11434', model: 'llama3.1:8b' },
+    ollama: { host: 'http://localhost:11434', model: 'qwen2.5:3b' },
     openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
     anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
   },
@@ -40,14 +40,14 @@ describe('SettingsDialog', () => {
   it('shows the defaults on the General tab', async () => {
     renderDialog()
     expect(await screen.findByDisplayValue('http://localhost:11434')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('llama3.1:8b')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('qwen2.5:3b')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('saves an edited model only when Save is clicked', async () => {
     const user = userEvent.setup()
     renderDialog()
-    const model = await screen.findByDisplayValue('llama3.1:8b')
+    const model = await screen.findByDisplayValue('qwen2.5:3b')
     const save = screen.getByRole('button', { name: 'Save' })
     expect(save).toBeDisabled()
 
@@ -65,7 +65,7 @@ describe('SettingsDialog', () => {
   it('discards unsaved edits when closed', async () => {
     const user = userEvent.setup()
     const { onClose } = renderDialog()
-    await user.type(await screen.findByDisplayValue('llama3.1:8b'), '-x')
+    await user.type(await screen.findByDisplayValue('qwen2.5:3b'), '-x')
     await user.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalled()
     expect(stored()).toBeNull()
@@ -74,7 +74,7 @@ describe('SettingsDialog', () => {
   it('switches provider from the dropdown and keeps a separate model and API key for each', async () => {
     const user = userEvent.setup()
     renderDialog()
-    await screen.findByDisplayValue('llama3.1:8b')
+    await screen.findByDisplayValue('qwen2.5:3b')
     const providerSelect = screen.getByRole('combobox', { name: 'AI provider' })
     expect(providerSelect).toHaveValue('ollama')
     expect(screen.queryByLabelText(/^API key/)).not.toBeInTheDocument()
@@ -87,7 +87,7 @@ describe('SettingsDialog', () => {
 
     expect(stored().provider).toBe('anthropic')
     expect(stored().providers.anthropic.apiKey).toBe('sk-ant-1')
-    expect(stored().providers.ollama.model).toBe('llama3.1:8b')
+    expect(stored().providers.ollama.model).toBe('qwen2.5:3b')
 
     await user.selectOptions(providerSelect, 'ChatGPT (OpenAI)')
     expect(screen.getByLabelText(/^API key/)).toHaveValue('')
@@ -98,7 +98,7 @@ describe('SettingsDialog', () => {
   it('offers Other for any OpenAI-compatible API, with no defaults and an optional key', async () => {
     const user = userEvent.setup()
     renderDialog()
-    await screen.findByDisplayValue('llama3.1:8b')
+    await screen.findByDisplayValue('qwen2.5:3b')
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'AI provider' }), 'Other (OpenAI-compatible)')
     expect(screen.getByText(/Any OpenAI-compatible API/)).toBeInTheDocument()
@@ -128,7 +128,7 @@ describe('SettingsDialog', () => {
   it('lists one prompt per action on the Prompts tab', async () => {
     const user = userEvent.setup()
     renderDialog()
-    await screen.findByDisplayValue('llama3.1:8b')
+    await screen.findByDisplayValue('qwen2.5:3b')
     await user.click(screen.getByRole('tab', { name: 'Prompts' }))
 
     for (const label of ['Improve writing', 'Make it more concise', 'Improve tone', 'Expand this idea', 'Fix grammar']) {
@@ -143,7 +143,7 @@ describe('SettingsDialog', () => {
   it('stores an edited prompt as an override and Reset removes it', async () => {
     const user = userEvent.setup()
     renderDialog()
-    await screen.findByDisplayValue('llama3.1:8b')
+    await screen.findByDisplayValue('qwen2.5:3b')
     await user.click(screen.getByRole('tab', { name: 'Prompts' }))
 
     const grammar = screen.getByLabelText('Fix grammar')

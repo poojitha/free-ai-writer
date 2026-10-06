@@ -14,7 +14,7 @@ import {
 
 const defaults = {
   providers: {
-    ollama: { host: 'http://localhost:11434', model: 'llama3.1:8b' },
+    ollama: { host: 'http://localhost:11434', model: 'qwen2.5:3b' },
     openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
     anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
   },
@@ -82,7 +82,7 @@ describe('providerFields', () => {
     const fields = providerFields({ providers: { anthropic: { apiKey: 'k', model: 'claude-x' } } }, defaults)
     expect(Object.keys(fields)).toEqual(PROVIDERS.map((p) => p.id))
     expect(fields.anthropic).toEqual({ host: 'https://api.anthropic.com', model: 'claude-x', apiKey: 'k' })
-    expect(fields.ollama).toEqual({ host: 'http://localhost:11434', model: 'llama3.1:8b', apiKey: '' })
+    expect(fields.ollama).toEqual({ host: 'http://localhost:11434', model: 'qwen2.5:3b', apiKey: '' })
   })
 
   it("reads Ollama's host and model from the old top-level fields", () => {
