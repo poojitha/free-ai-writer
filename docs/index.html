@@ -20,7 +20,6 @@
       --coral-hover: #cf3b23;
       --teal: #2f9c86;
       --teal-soft: #e3f5f0;
-      --placeholder: #f2efe9;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -33,7 +32,6 @@
         --coral-hover: #ff7d65;
         --teal: #6fd3bc;
         --teal-soft: #1d322d;
-        --placeholder: #23272c;
       }
     }
     :root[data-theme="dark"] {
@@ -46,7 +44,6 @@
       --coral-hover: #ff7d65;
       --teal: #6fd3bc;
       --teal-soft: #1d322d;
-      --placeholder: #23272c;
     }
 
     * { box-sizing: border-box; }
@@ -133,23 +130,60 @@
     /* Sections */
     section { padding: 56px 0; border-top: 1px solid var(--border); }
     section > .wrap > h2 { font-size: 32px; }
-    .lead { color: var(--text-muted); max-width: 640px; margin: 0 0 32px; }
+    .lead { color: var(--text-muted); max-width: 90%; margin: 0 0 32px; }
 
-    .shot {
-      margin: 0;
-      aspect-ratio: 16 / 10;
-      border: 2px dashed var(--border);
+    .slideshow { position: relative; }
+    .slides {
+      overflow: hidden;
+      border: 1px solid var(--border);
       border-radius: 14px;
-      background: var(--placeholder);
+      box-shadow: 0 12px 32px rgb(0 0 0 / 0.08);
+      background: var(--surface);
+    }
+    .track { display: flex; transition: transform 0.45s ease; }
+    .shot { margin: 0; flex: 0 0 100%; }
+    .shot img { display: block; width: 100%; height: auto; }
+    .caption { min-height: 24px; margin-top: 14px; font-size: 15px; color: var(--text-muted); text-align: center; }
+    .arrow {
+      position: absolute;
+      top: calc(50% - 30px);
+      width: 44px;
+      height: 44px;
       display: grid;
       place-items: center;
-      color: var(--text-muted);
-      font-size: 14px;
-      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
     }
-    .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .shots { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 20px; }
-    .shots .shot { aspect-ratio: 4 / 3; }
+    .arrow:hover { color: var(--coral); }
+    .arrow svg { width: 20px; height: 20px; }
+    .arrow.prev { left: -22px; }
+    .arrow.next { right: -22px; }
+    .dots { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+    .dot {
+      width: 10px;
+      height: 10px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: var(--border);
+      cursor: pointer;
+      transition: width 0.2s, background 0.2s;
+    }
+    .dot[aria-current="true"] { width: 26px; background: var(--coral); }
+    @media (max-width: 1000px) {
+      .arrow.prev { left: 8px; }
+      .arrow.next { right: 8px; }
+    }
+    @media (max-width: 640px) {
+      .arrow { width: 36px; height: 36px; top: calc(50% - 40px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .track { transition: none; }
+    }
 
     .grid {
       display: grid;
@@ -187,6 +221,18 @@
       font-size: 15px;
     }
     .callout p { margin: 4px 0 0; color: var(--text-muted); }
+    .callout.tip { border-left-color: var(--teal); }
+    .callout ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-muted); }
+    .callout li { margin-bottom: 6px; }
+    pre.cmd {
+      margin: 10px 0 0;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      font: 14px/1.5 ui-monospace, Consolas, monospace;
+      overflow-x: auto;
+    }
 
     details {
       background: var(--surface);
@@ -221,6 +267,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#ai">AI providers</a></li>
         <li><a href="#install">Install</a></li>
+        <li><a href="#ollama">Ollama</a></li>
         <li><a href="#faq">FAQ</a></li>
       </ul>
     </div>
@@ -244,13 +291,31 @@
       <div class="wrap">
         <h2>A quiet place to write</h2>
         <p class="lead">A clean page with nothing in your way. The formatting toolbar stays hidden until you need it.</p>
-        <!-- Replace the placeholder text with: <img src="screenshots/editor.png" alt="The Hush Writer editor"> -->
-        <figure class="shot">Screenshot: the editor</figure>
-        <div class="shots">
-          <!-- <img src="screenshots/suggestions.png" alt="AI suggestions panel"> -->
-          <figure class="shot">Screenshot: AI suggestions</figure>
-          <!-- <img src="screenshots/dark-mode.png" alt="Hush Writer in dark mode"> -->
-          <figure class="shot">Screenshot: dark mode</figure>
+        <div class="slideshow" id="slideshow" role="region" aria-roledescription="carousel" aria-label="Screenshots">
+          <div class="slides">
+            <div class="track">
+              <figure class="shot" aria-roledescription="slide" aria-label="1 of 4" data-caption="A clean page with nothing in your way">
+                <img src="screenshots/editor.png" alt="The Hush Writer editor" width="1756" height="1097">
+              </figure>
+              <figure class="shot" aria-roledescription="slide" aria-label="2 of 4" data-caption="AI suggestions, ready to compare and replace">
+                <img src="screenshots/ai-suggestions.png" alt="AI suggestions shown below the editor" width="1758" height="1094">
+              </figure>
+              <figure class="shot" aria-roledescription="slide" aria-label="3 of 4" data-caption="Edit the prompt behind every action">
+                <img src="screenshots/change-prompts.png" alt="Settings dialog for editing AI prompts" width="1755" height="1094">
+              </figure>
+              <figure class="shot" aria-roledescription="slide" aria-label="4 of 4" data-caption="Light/Dark mode for day and night writing">
+                <img src="screenshots/dark-mode.png" alt="Hush Writer in dark mode" width="1759" height="1090">
+              </figure>
+            </div>
+          </div>
+          <button class="arrow prev" type="button" aria-label="Previous screenshot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button class="arrow next" type="button" aria-label="Next screenshot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <p class="caption" aria-live="polite"></p>
+          <div class="dots"></div>
         </div>
       </div>
     </section>
@@ -305,16 +370,8 @@
             <p>The default. Runs models on your own machine, so your writing never leaves it. Free, and works offline.</p>
           </div>
           <div class="card">
-            <h3>ChatGPT (OpenAI)</h3>
-            <p>Use OpenAI's models with your own API key.</p>
-          </div>
-          <div class="card">
-            <h3>Claude (Anthropic)</h3>
-            <p>Use Anthropic's models with your own API key.</p>
-          </div>
-          <div class="card">
             <h3>Other</h3>
-            <p>Any OpenAI-compatible service. Enter its address, model and key.</p>
+            <p>Any CHAT service  like ChatGPT or Claude or Gemini. Enter its address, model and API key.</p>
           </div>
         </div>
       </div>
@@ -326,12 +383,40 @@
         <p class="lead">Up and writing in a few minutes.</p>
         <ol class="steps">
           <li><strong>Download Hush Writer</strong>Get <code>hush-writer.exe</code> from the button above. No installer is needed. Put it anywhere and double-click to run.</li>
-          <li><strong>Set up an AI provider</strong>For private, local AI, install <a href="https://ollama.com">Ollama</a> and run <code>ollama pull llama3.1:8b</code>. Or open Settings in Hush Writer and add an OpenAI or Anthropic API key.</li>
+          <li><strong>Set up an AI provider</strong>For private, local AI, set up Ollama (see <a href="#ollama">Setting up Ollama</a> below). Or open Settings in Hush Writer and add an OpenAI or Anthropic API key.</li>
           <li><strong>Start writing</strong>Type away. When you want help, select some text and pick a suggestion, or press Enter at the end of a line.</li>
         </ol>
         <div class="callout">
           <strong>Seeing “Windows protected your PC”?</strong>
           <p>Hush Writer isn't code-signed yet, so Windows SmartScreen may warn you the first time you run it. Click <em>More info</em>, then <em>Run anyway</em>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="ollama">
+      <div class="wrap">
+        <h2>Setting up Ollama</h2>
+        <p class="lead">Ollama runs AI models on your own computer, so your writing never leaves it. It's free and takes about 15 minutes to set up, most of which is waiting for the download.</p>
+        <ol class="steps">
+          <li><strong>Download Ollama</strong>Go to <a href="https://ollama.com/download">ollama.com/download</a>, choose <em>Windows</em> and download the installer.</li>
+          <li><strong>Install it</strong>Run the installer and follow the prompts. When it finishes, Ollama starts in the background. You'll see its llama icon in the system tray, near the clock.</li>
+          <li><strong>Open a terminal</strong>Press the <kbd>Windows</kbd> key, type <em>PowerShell</em> and press <kbd>Enter</kbd>.</li>
+          <li><strong>Download the AI model</strong>Type this command and press <kbd>Enter</kbd>. The model is about 5 GB, so this may take a while.
+            <pre class="cmd">ollama pull llama3.1:8b</pre>
+          </li>
+          <li><strong>Start Hush Writer</strong>That's it. Hush Writer already uses Ollama's standard address (<code>http://localhost:11434</code>) and the <code>llama3.1:8b</code> model, so there's nothing to change in Settings.</li>
+        </ol>
+        <div class="callout tip">
+          <strong>What kind of computer do I need?</strong>
+          <p>At least 8 GB of memory (16 GB is more comfortable) and about 6 GB of free disk space. A graphics card makes suggestions much faster, but isn't required.</p>
+        </div>
+        <div class="callout">
+          <strong>Suggestions not working?</strong>
+          <ul>
+            <li><strong>Make sure Ollama is running.</strong> Look for the llama icon in the system tray. If it isn't there, open Ollama from the Start menu.</li>
+            <li><strong>Check the model is downloaded.</strong> Run <code>ollama list</code> in PowerShell. You should see <code>llama3.1:8b</code>.</li>
+            <li><strong>Using a different model?</strong> Enter its name in Hush Writer's Settings, exactly as <code>ollama list</code> shows it.</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -352,6 +437,13 @@
           <p>On your computer only, in the app's local settings. They are sent only to the provider you chose.</p>
         </details>
         <details>
+          <summary>Which port does Ollama use, and how do I check it?</summary>
+          <p>Ollama uses port <code>11434</code> unless you've changed it, and Hush Writer connects to <code>http://localhost:11434</code> by default, so most people don't need to do anything.</p>
+          <p>To check, open <a href="http://localhost:11434">http://localhost:11434</a> in your browser. If it says <em>“Ollama is running”</em>, you're all set. If the page doesn't load, make sure Ollama is running, then run this in PowerShell:</p>
+          <pre class="cmd">echo $env:OLLAMA_HOST</pre>
+          <p>If nothing is printed, Ollama is on the default port. If you see an address such as <code>0.0.0.0:8080</code>, open Settings in Hush Writer and set <em>Ollama host</em> to <code>http://localhost:8080</code>, using the port number shown.</p>
+        </details>
+        <details>
           <summary>What do I need to run it?</summary>
           <p>Windows 10 or 11 with Microsoft's WebView2 runtime, which comes with Windows on almost all machines.</p>
         </details>
@@ -368,5 +460,69 @@
       Hush Writer · <a href="https://github.com/poojitha/free-ai-writer">View on GitHub</a>
     </div>
   </footer>
+  <script>
+    (function () {
+      var root = document.getElementById('slideshow');
+      var track = root.querySelector('.track');
+      var slides = root.querySelectorAll('.shot');
+      var caption = root.querySelector('.caption');
+      var dotsBox = root.querySelector('.dots');
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var index = 0;
+      var timer = null;
+
+      var dots = Array.prototype.map.call(slides, function (slide, i) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'dot';
+        dot.setAttribute('aria-label', 'Show screenshot ' + (i + 1));
+        dot.addEventListener('click', function () { show(i); restart(); });
+        dotsBox.appendChild(dot);
+        return dot;
+      });
+
+      function show(i) {
+        index = (i + slides.length) % slides.length;
+        track.style.transform = 'translateX(' + (-100 * index) + '%)';
+        caption.textContent = slides[index].dataset.caption;
+        slides.forEach(function (slide, n) { slide.setAttribute('aria-hidden', n === index ? 'false' : 'true'); });
+        dots.forEach(function (dot, n) { dot.setAttribute('aria-current', n === index ? 'true' : 'false'); });
+      }
+
+      function stop() { clearInterval(timer); timer = null; }
+      function start() {
+        if (reduceMotion || timer) return;
+        timer = setInterval(function () { show(index + 1); }, 5000);
+      }
+      function restart() { stop(); start(); }
+
+      root.querySelector('.prev').addEventListener('click', function () { show(index - 1); restart(); });
+      root.querySelector('.next').addEventListener('click', function () { show(index + 1); restart(); });
+      root.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') { show(index - 1); restart(); }
+        if (e.key === 'ArrowRight') { show(index + 1); restart(); }
+      });
+
+      // Pause while the visitor is looking at or using the slideshow.
+      root.addEventListener('mouseenter', stop);
+      root.addEventListener('mouseleave', start);
+      root.addEventListener('focusin', stop);
+      root.addEventListener('focusout', start);
+
+      // Swipe on touch screens.
+      var startX = null;
+      root.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; stop(); }, { passive: true });
+      root.addEventListener('touchend', function (e) {
+        if (startX === null) return;
+        var dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) > 40) show(index + (dx < 0 ? 1 : -1));
+        startX = null;
+        start();
+      });
+
+      show(0);
+      start();
+    })();
+  </script>
 </body>
 </html>
