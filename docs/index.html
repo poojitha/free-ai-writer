@@ -224,6 +224,26 @@
     .callout.tip { border-left-color: var(--teal); }
     .callout ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-muted); }
     .callout li { margin-bottom: 6px; }
+    .models-heading { margin-top: 40px; font-size: 22px; }
+    .table-scroll { margin-top: 16px; overflow-x: auto; }
+    table.models {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    table.models th, table.models td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    table.models th { font-weight: 600; }
+    table.models td { color: var(--text-muted); }
+    table.models td:first-child { color: var(--text); white-space: nowrap; }
+    table.models tr:last-child td { border-bottom: none; }
     pre.cmd {
       margin: 10px 0 0;
       padding: 12px 16px;
@@ -408,8 +428,30 @@
         </ol>
         <div class="callout tip">
           <strong>What kind of computer do I need?</strong>
-          <p>At least 8 GB of memory and about 3 GB of free disk space. A graphics card makes suggestions much faster, but isn't required.</p>
+          <p>For the default model, at least 8 GB of memory and about 3 GB of free disk space. A graphics card makes suggestions much faster, but isn't required.</p>
         </div>
+
+        <h3 class="models-heading">Choosing a different model</h3>
+        <p>The default, <code>qwen2.5:3b</code>, is a good balance of speed and quality on most computers. Bigger models write better but need more memory and respond more slowly; smaller ones are quicker but make more mistakes. Pick one that fits your computer, download it with <code>ollama pull</code>, then enter its name as the model in Hush Writer's Settings.</p>
+        <div class="table-scroll">
+          <table class="models">
+            <thead>
+              <tr><th>Model</th><th>Download size</th><th>Memory needed</th><th>Good for</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>qwen2.5:0.5b</code></td><td>0.4 GB</td><td>4 GB</td><td>Very old or low-memory computers. Fast, but suggestions are basic.</td></tr>
+              <tr><td><code>qwen2.5:1.5b</code></td><td>1 GB</td><td>4 GB</td><td>Laptops without a graphics card. Handles simple grammar fixes well.</td></tr>
+              <tr><td><code>qwen2.5:3b</code> (default)</td><td>1.9 GB</td><td>8 GB</td><td>Most computers. Good everyday rewriting at a reasonable speed.</td></tr>
+              <tr><td><code>qwen2.5:7b</code></td><td>4.7 GB</td><td>16 GB</td><td>Noticeably better tone and flow. Best with a graphics card.</td></tr>
+              <tr><td><code>llama3.2:3b</code></td><td>2 GB</td><td>8 GB</td><td>An alternative to the default from Meta, similar in size and speed.</td></tr>
+              <tr><td><code>gemma3:4b</code></td><td>3.3 GB</td><td>8 GB</td><td>Google's small model. Natural-sounding English.</td></tr>
+              <tr><td><code>llama3.1:8b</code></td><td>4.9 GB</td><td>16 GB</td><td>A well-rounded mid-size model from Meta.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>For example, to switch to the 7B Qwen model:</p>
+        <pre class="cmd">ollama pull qwen2.5:7b</pre>
+        <p>Sizes are approximate and come from the <a href="https://ollama.com/library">Ollama model library</a>, where you can browse many more models. You can keep several downloaded and switch between them in Settings; remove one you no longer need with <code>ollama rm</code> followed by its name.</p>
         <div class="callout">
           <strong>Suggestions not working?</strong>
           <ul>
