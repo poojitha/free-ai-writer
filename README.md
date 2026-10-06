@@ -1,6 +1,10 @@
-# Write
+<p align="center">
+  <img src="frontend/src/assets/hush-logo.png" alt="Hush Writer logo" width="160">
+</p>
 
-A desktop writing app with AI-assisted editing. Write in a rich-text editor, then have a local LLM (via [Ollama](https://ollama.com)) improve your text's grammar, clarity, and flow. Everything runs on your machine — no cloud services.
+# Hush Writer
+
+A distraction-free, AI-assisted writing tool for the desktop. Write in a rich-text editor, then have a local LLM (via [Ollama](https://ollama.com)) improve your text's grammar, clarity, and flow. Everything runs on your machine — no cloud services.
 
 Built with [Wails v2](https://wails.io) (Go backend) and React + [TinyMCE](https://www.tiny.cloud) (frontend).
 

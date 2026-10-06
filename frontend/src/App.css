@@ -108,6 +108,13 @@ button {
   color: var(--text-muted);
 }
 
+.app-logo {
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
+  object-fit: contain;
+}
+
 .dirty-dot {
   width: 6px;
   height: 6px;

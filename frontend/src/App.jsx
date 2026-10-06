@@ -9,6 +9,7 @@ import {
 } from '../wailsjs/go/main/App'
 import { ClipboardSetText, WindowSetTitle } from '../wailsjs/runtime/runtime'
 import { useTheme } from './theme.js'
+import logo from './assets/hush-logo.png'
 import SettingsDialog from './SettingsDialog.jsx'
 import { exportDocument, formatFromPath, importDocument } from './documentFormats.js'
 import {
@@ -266,6 +267,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="doc-name">
+          <img className="app-logo" src={logo} alt="Hush Writer" />
           {fileName(docPath)}
           {dirty && <span className="dirty-dot" title="Unsaved changes" />}
         </div>
