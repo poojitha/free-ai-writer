@@ -140,7 +140,7 @@ export default function App() {
   }, [toolbarOpen])
 
   useEffect(() => {
-    WindowSetTitle(`${dirty ? '• ' : ''}${fileName(docPath)} — Write`)
+    WindowSetTitle(`${dirty ? '• ' : ''}${fileName(docPath)} — Hush Writer`)
   }, [docPath, dirty])
 
   const updateSuggestion = (id, fields) =>
