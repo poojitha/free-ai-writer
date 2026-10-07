@@ -11,6 +11,7 @@
     "email": ""
   },
   "info": {
-    "productName": "Hush Writer"
+    "productName": "Hush Writer",
+    "productVersion": "1.0.0"
   }
 }
