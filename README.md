@@ -71,7 +71,7 @@ The default prompt is:
 
 > Improve the writing quality of the following text. Fix grammar, clarity, and flow, but preserve the original meaning. Return only the improved text, with no preamble or explanation.
 
-Your text is appended after the prompt, following a `Text:` line. Settings are saved automatically and persist across restarts. These defaults are defined in `app.go`.
+Your text is appended after the prompt, following a `Text:` line. Settings are saved automatically and persist across restarts. The host and model defaults are defined in `app.go`; the default prompts in `frontend/src/settings.js`.
 
 ## Project structure
 
@@ -82,3 +82,9 @@ frontend/src/App.jsx  UI: editor, Improve and Settings tabs
 frontend/wailsjs/     Auto-generated Go↔JS bindings (do not edit)
 build/                Platform build assets; output in build/bin/
 ```
+
+## License
+
+Hush Writer is released under the [MIT License](LICENSE).
+
+It bundles [TinyMCE](https://www.tiny.cloud), which is licensed under the GPL v2 or later, so builds of the app that include it are distributed under the GPL's terms as well.
