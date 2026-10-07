@@ -442,6 +442,7 @@ body.resizing {
 }
 
 .suggestion-card {
+  display: flow-root;
   flex: 0 0 auto;
   padding: 10px 14px 12px;
   background: var(--surface);
@@ -450,12 +451,14 @@ body.resizing {
   box-shadow: var(--shadow);
 }
 
+/* Floated so the text starts beside the buttons, not on a row below them. */
 .suggestion-head {
+  float: right;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   min-height: 28px;
+  margin-left: 12px;
 }
 
 .suggestion-label {
@@ -484,7 +487,7 @@ body.resizing {
 }
 
 .suggestion-original {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   font-size: 13px;
   color: var(--text-faint);
   white-space: pre-wrap;

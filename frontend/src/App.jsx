@@ -55,12 +55,22 @@ function IconButton({ label, onClick, active, children }) {
   )
 }
 
+// How much of the original text a suggestion card shows; the rest is cut off
+// with an ellipsis and the full text is in its tooltip.
+const ORIGINAL_PREVIEW_LENGTH = 100
+
+function previewText(text) {
+  const chars = [...text]
+  return chars.length > ORIGINAL_PREVIEW_LENGTH
+    ? chars.slice(0, ORIGINAL_PREVIEW_LENGTH).join('').trimEnd() + '…'
+    : text
+}
+
 function SuggestionCard({ suggestion, onApply, onCopy, onDismiss }) {
-  const { label, original, improved, error, loading, stale } = suggestion
+  const { original, improved, error, loading, stale } = suggestion
   return (
     <div className="suggestion-card">
       <div className="suggestion-head">
-        <span className="suggestion-label">{label}</span>
         <div className="suggestion-actions">
           {stale && <span className="suggestion-stale">Original text has changed</span>}
           {improved && <button className="text-button" onClick={onCopy}>Copy</button>}
@@ -70,7 +80,7 @@ function SuggestionCard({ suggestion, onApply, onCopy, onDismiss }) {
           </button>
         </div>
       </div>
-      <p className="suggestion-original">{original}</p>
+      <p className="suggestion-original" title={original}>{previewText(original)}</p>
       {loading && <div className="suggestion-loading"><span /><span /><span /></div>}
       {error && <p className="suggestion-error">{error}</p>}
       {improved && <p className="suggestion-result">{improved}</p>}
@@ -365,6 +375,8 @@ export default function App() {
           >
             <InfoIcon />
           </span>
+          {/* The newest suggestion's action; the list is newest first. */}
+          {suggestions.length > 0 && <span className="suggestion-label">{suggestions[0].label}</span>}
           {suggestions.length > 0 && (
             <button className="text-button assist-clear" onClick={() => setSuggestions([])}>Clear all</button>
           )}
