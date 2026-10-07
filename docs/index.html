@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hush Writer</title>
-  <meta name="description" content="Hush Writer is a distraction-free, AI-assisted writing tool for the desktop. Free for Windows.">
+  <meta name="description" content="Hush Writer is a distraction-free, AI-assisted writing tool for the desktop. Free for Windows and Mac.">
   <link rel="icon" type="image/png" href="hush-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -125,6 +125,13 @@
     }
     .button:hover { background: var(--coral-hover); }
     .button svg { width: 20px; height: 20px; }
+    .button.secondary {
+      background: transparent;
+      color: var(--text);
+      box-shadow: inset 0 0 0 2px var(--border);
+    }
+    .button.secondary:hover { background: var(--surface); box-shadow: inset 0 0 0 2px var(--text-muted); }
+    .downloads { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
     .hero-note { font-size: 14px; color: var(--text-muted); margin-top: 14px; }
 
     /* Sections */
@@ -299,11 +306,17 @@
         <img src="hush-logo.png" alt="Hush Writer logo">
         <h1>Hush Writer</h1>
         <p class="tagline">A distraction-free, AI-assisted writing tool for the desktop. Just you, your words, and a little help when you ask for it.</p>
-        <a class="button" href="https://github.com/poojitha/free-ai-writer/releases/latest/download/hush-writer.exe">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-          Download for Windows
-        </a>
-        <p class="hero-note">Free · Windows 10 and 11 · <a href="https://github.com/poojitha/free-ai-writer/releases">All releases</a></p>
+        <div class="downloads">
+          <a class="button" href="https://github.com/poojitha/hush-writer/releases/latest/download/hush-writer.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            Download for Windows
+          </a>
+          <a class="button secondary" href="https://github.com/poojitha/hush-writer/releases/latest/download/Hush-Writer-macOS.zip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            Download for Mac
+          </a>
+        </div>
+        <p class="hero-note">Free · Windows 10 and 11 · macOS (Intel and Apple Silicon) · <a href="https://github.com/poojitha/hush-writer/releases">All releases</a></p>
       </div>
     </header>
 
@@ -402,13 +415,17 @@
         <h2>Getting started</h2>
         <p class="lead">Up and writing in a few minutes.</p>
         <ol class="steps">
-          <li><strong>Download Hush Writer</strong>Get <code>hush-writer.exe</code> from the button above. No installer is needed. Put it anywhere and double-click to run.</li>
+          <li><strong>Download Hush Writer</strong>On Windows, get <code>hush-writer.exe</code> from the button above. No installer is needed. Put it anywhere and double-click to run. On a Mac, download the zip, double-click it to unzip, and drag Hush Writer into your Applications folder.</li>
           <li><strong>Set up an AI provider</strong>For private, local AI, set up Ollama (see <a href="#ollama">Setting up Ollama</a> below). Or open Settings in Hush Writer and add an OpenAI or Anthropic API key.</li>
           <li><strong>Start writing</strong>Type away. When you want help, select some text and pick a suggestion, or press Enter at the end of a line.</li>
         </ol>
         <div class="callout">
           <strong>Seeing “Windows protected your PC”?</strong>
           <p>Hush Writer isn't code-signed yet, so Windows SmartScreen may warn you the first time you run it. Click <em>More info</em>, then <em>Run anyway</em>.</p>
+        </div>
+        <div class="callout">
+          <strong>Mac says Hush Writer “can't be opened”?</strong>
+          <p>Hush Writer isn't signed by Apple yet, so macOS blocks it the first time. Click <em>Done</em>, then open <em>System Settings → Privacy &amp; Security</em>, scroll down and click <em>Open Anyway</em> next to Hush Writer. You only need to do this once.</p>
         </div>
       </div>
     </section>
@@ -418,9 +435,9 @@
         <h2>Setting up Ollama</h2>
         <p class="lead">Ollama runs AI models on your own computer, so your writing never leaves it. It's free and takes about 15 minutes to set up, most of which is waiting for the download.</p>
         <ol class="steps">
-          <li><strong>Download Ollama</strong>Go to <a href="https://ollama.com/download">ollama.com/download</a>, choose <em>Windows</em> and download the installer.</li>
-          <li><strong>Install it</strong>Run the installer and follow the prompts. When it finishes, Ollama starts in the background. You'll see its llama icon in the system tray, near the clock.</li>
-          <li><strong>Open a terminal</strong>Press the <kbd>Windows</kbd> key, type <em>PowerShell</em> and press <kbd>Enter</kbd>.</li>
+          <li><strong>Download Ollama</strong>Go to <a href="https://ollama.com/download">ollama.com/download</a>, choose <em>Windows</em> or <em>macOS</em> and download it.</li>
+          <li><strong>Install it</strong>On Windows, run the installer and follow the prompts. On a Mac, unzip it and drag Ollama into Applications, then open it. Ollama then runs in the background, with a llama icon in the system tray near the clock (Windows) or the menu bar at the top of the screen (Mac).</li>
+          <li><strong>Open a terminal</strong>On Windows, press the <kbd>Windows</kbd> key, type <em>PowerShell</em> and press <kbd>Enter</kbd>. On a Mac, press <kbd>Cmd</kbd>+<kbd>Space</kbd>, type <em>Terminal</em> and press <kbd>Enter</kbd>.</li>
           <li><strong>Download the AI model</strong>Type this command and press <kbd>Enter</kbd>. The model is about 2 GB, so this may take a few minutes.
             <pre class="cmd">ollama pull qwen2.5:3b</pre>
           </li>
@@ -455,8 +472,8 @@
         <div class="callout">
           <strong>Suggestions not working?</strong>
           <ul>
-            <li><strong>Make sure Ollama is running.</strong> Look for the llama icon in the system tray. If it isn't there, open Ollama from the Start menu.</li>
-            <li><strong>Check the model is downloaded.</strong> Run <code>ollama list</code> in PowerShell. You should see <code>qwen2.5:3b</code>.</li>
+            <li><strong>Make sure Ollama is running.</strong> Look for the llama icon in the system tray (Windows) or menu bar (Mac). If it isn't there, open Ollama from the Start menu or your Applications folder.</li>
+            <li><strong>Check the model is downloaded.</strong> Run <code>ollama list</code> in PowerShell or Terminal. You should see <code>qwen2.5:3b</code>.</li>
             <li><strong>Using a different model?</strong> Enter its name in Hush Writer's Settings, exactly as <code>ollama list</code> shows it.</li>
           </ul>
         </div>
@@ -483,15 +500,17 @@
           <p>Ollama uses port <code>11434</code> unless you've changed it, and Hush Writer connects to <code>http://localhost:11434</code> by default, so most people don't need to do anything.</p>
           <p>To check, open <a href="http://localhost:11434">http://localhost:11434</a> in your browser. If it says <em>“Ollama is running”</em>, you're all set. If the page doesn't load, make sure Ollama is running, then run this in PowerShell:</p>
           <pre class="cmd">echo $env:OLLAMA_HOST</pre>
+          <p>or this in Terminal on a Mac:</p>
+          <pre class="cmd">echo $OLLAMA_HOST</pre>
           <p>If nothing is printed, Ollama is on the default port. If you see an address such as <code>0.0.0.0:8080</code>, open Settings in Hush Writer and set <em>Ollama host</em> to <code>http://localhost:8080</code>, using the port number shown.</p>
         </details>
         <details>
           <summary>What do I need to run it?</summary>
-          <p>Windows 10 or 11 with Microsoft's WebView2 runtime, which comes with Windows on almost all machines.</p>
+          <p>On Windows: Windows 10 or 11 with Microsoft's WebView2 runtime, which comes with Windows on almost all machines. On a Mac: a recent version of macOS, on an Intel or Apple Silicon Mac.</p>
         </details>
         <details>
-          <summary>Is there a Mac or Linux version?</summary>
-          <p>Not yet as a download, but the app can be built from the <a href="https://github.com/poojitha/free-ai-writer">source code</a>.</p>
+          <summary>Is there a Linux version?</summary>
+          <p>Not yet as a download, but the app can be built from the <a href="https://github.com/poojitha/hush-writer">source code</a>.</p>
         </details>
       </div>
     </section>
@@ -499,7 +518,7 @@
 
   <footer>
     <div class="wrap">
-      Hush Writer · <a href="https://github.com/poojitha/free-ai-writer">View on GitHub</a>
+      Hush Writer · <a href="https://github.com/poojitha/hush-writer">View on GitHub</a>
     </div>
   </footer>
   <script>

@@ -1,0 +1,71 @@
+# Builds Hush Writer for Windows and macOS (one universal build for Intel and
+# Apple Silicon). Pushing a version tag publishes both to that tag's GitHub
+# release, with the file names the download buttons in docs/index.html link
+# to. Run by hand from the Actions tab, the builds are kept as run artifacts.
+# Neither build is signed, so Windows and macOS warn users the first time.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Build
+        run: wails build -platform darwin/universal
+      - name: Zip the app
+        run: ditto -c -k --keepParent build/bin/*.app Hush-Writer-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hush-Writer-macOS
+          path: Hush-Writer-macOS.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Build
+        run: wails build -platform windows/amd64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hush-writer-windows
+          path: build/bin/hush-writer.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Hush Writer ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            hush-writer.exe
+            Hush-Writer-macOS.zip

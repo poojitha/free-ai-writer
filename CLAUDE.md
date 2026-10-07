@@ -15,6 +15,7 @@ Run from the repo root unless noted (requires the Wails CLI, Go 1.26, Node):
 - `wails generate module` — regenerate `frontend/wailsjs/` bindings after changing exported methods on `App`.
 - `cd frontend && npm install` — installs deps; its `postinstall` script (`scripts/copyTinymce.mjs`) copies `node_modules/tinymce` into `public/tinymce`. If the editor fails to load, rerun this.
 - `cd frontend && npm run build` — frontend-only build into `frontend/dist`.
+- Releases are built on GitHub Actions (`.github/workflows/release.yml`), since Wails can't cross-compile for macOS from Windows: pushing a `v*` tag builds unsigned `hush-writer.exe` and a universal macOS `.app` (zipped as `Hush-Writer-macOS.zip`) and publishes both to that tag's release — the download buttons in `docs/index.html` link to those exact names under `releases/latest/download/`. Bump `productVersion` in `wails.json` and `version` in `frontend/package.json` before tagging. It can also be run by hand from the Actions tab (builds kept as artifacts, nothing published).
 
 Tests (no linters are configured):
 
