@@ -15,11 +15,6 @@ import (
 const (
 	defaultOllamaHost  = "http://localhost:11434"
 	defaultOllamaModel = "qwen2.5:3b"
-	// Used both when pressing Enter and by the "Improve writing" action.
-	defaultPrompt = "Improve the following text so it is clear and reads smoothly. " +
-		"Fix grammar, simplify confusing or awkward phrasing, and improve flow, " +
-		"while keeping the original meaning and voice. Return only the improved " +
-		"text, with no preamble or explanation."
 )
 
 // App struct
@@ -58,11 +53,14 @@ func (a *App) startup(ctx context.Context) {
 }
 
 // ImproveText sends the given text to the AI provider in cfg and returns an
-// improved version. prompt is prepended to the text as instructions; empty
-// prompt or cfg fields fall back to the defaults.
+// improved version. prompt is prepended to the text as instructions (the
+// frontend owns the prompts); empty cfg fields fall back to the defaults.
 func (a *App) ImproveText(text, prompt string, cfg AIConfig) (string, error) {
 	if strings.TrimSpace(text) == "" {
 		return "", fmt.Errorf("nothing to improve")
+	}
+	if strings.TrimSpace(prompt) == "" {
+		return "", fmt.Errorf("no prompt given")
 	}
 
 	id := strings.TrimSpace(cfg.Provider)
@@ -89,10 +87,6 @@ func (a *App) ImproveText(text, prompt string, cfg AIConfig) (string, error) {
 	if p.needsKey && apiKey == "" {
 		return "", fmt.Errorf("add your %s API key in Settings", p.name)
 	}
-	if strings.TrimSpace(prompt) == "" {
-		prompt = defaultPrompt
-	}
-
 	reply, err := p.generate(a.ctx, host, model, apiKey, prompt+"\n\nText:\n "+text)
 	var unreachable errUnreachable
 	if errors.As(err, &unreachable) {
@@ -142,25 +136,10 @@ func cleanResponse(s string) string {
 	return s
 }
 
-const returnOnly = " Return only the rewritten text, with no preamble or explanation."
-
-// defaultActionPrompts are the prompts for the suggestion bar actions, keyed
-// by the action ids the frontend uses. The "improve" action uses
-// defaultPrompt instead.
-var defaultActionPrompts = map[string]string{
-	"concise": "Rewrite the following text to be more concise. Remove filler and redundancy but keep every idea." + returnOnly,
-	"tone":    "Rewrite the following text with a warmer, more natural and engaging tone, keeping its meaning." + returnOnly,
-	"expand":  "Expand the following text with more detail, examples, or depth, in the same voice and style." + returnOnly,
-	"grammar": "Fix the grammar, spelling, and punctuation of the following text. Change nothing else." + returnOnly,
-}
-
-// DefaultSettings are the built-in prompts and each provider's host/model.
-// Prompt is used when pressing Enter; ActionPrompts by the suggestion bar
-// actions.
+// DefaultSettings are each provider's default host/model. The default prompts
+// live in the frontend (frontend/src/settings.js).
 type DefaultSettings struct {
-	Prompt        string                      `json:"prompt"`
-	ActionPrompts map[string]string           `json:"actionPrompts"`
-	Providers     map[string]ProviderDefaults `json:"providers"`
+	Providers map[string]ProviderDefaults `json:"providers"`
 }
 
 // GetDefaultSettings returns the built-in defaults, so the frontend doesn't
@@ -170,11 +149,7 @@ func (a *App) GetDefaultSettings() DefaultSettings {
 	for id, p := range providers {
 		defaults[id] = p.defaults
 	}
-	return DefaultSettings{
-		Prompt:        defaultPrompt,
-		ActionPrompts: defaultActionPrompts,
-		Providers:     defaults,
-	}
+	return DefaultSettings{Providers: defaults}
 }
 
 // Document is a file opened from disk. Data is the raw file contents (sent

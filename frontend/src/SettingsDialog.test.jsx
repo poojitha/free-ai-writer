@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingsDialog from './SettingsDialog.jsx'
-import { SETTINGS_STORAGE_KEY } from './settings.js'
+import { DEFAULT_PROMPTS, SETTINGS_STORAGE_KEY } from './settings.js'
 
 vi.mock('../wailsjs/go/main/App', () => ({
   GetDefaultSettings: vi.fn(),
@@ -14,13 +14,6 @@ const defaults = {
     ollama: { host: 'http://localhost:11434', model: 'qwen2.5:3b' },
     openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
     anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
-  },
-  prompt: 'default improve',
-  actionPrompts: {
-    concise: 'default concise',
-    tone: 'default tone',
-    expand: 'default expand',
-    grammar: 'default grammar',
   },
 }
 
@@ -135,7 +128,7 @@ describe('SettingsDialog', () => {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }
     expect(screen.queryByLabelText(/clarify/i)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Improve writing')).toHaveValue('default improve')
+    expect(screen.getByLabelText('Improve writing')).toHaveValue(DEFAULT_PROMPTS.prompt)
     expect(screen.getByText(/also runs when you press/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument()
   })
@@ -153,7 +146,7 @@ describe('SettingsDialog', () => {
     expect(stored().actionPrompts).toEqual({ grammar: 'Only fix spelling.' })
 
     await user.click(screen.getByRole('button', { name: 'Reset' }))
-    expect(grammar).toHaveValue('default grammar')
+    expect(grammar).toHaveValue(DEFAULT_PROMPTS.actionPrompts.grammar)
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(stored().actionPrompts).toEqual({})
   })

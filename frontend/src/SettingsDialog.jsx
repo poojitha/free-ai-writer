@@ -3,6 +3,7 @@ import { GetDefaultSettings } from '../wailsjs/go/main/App'
 import { CloseIcon, EnterIcon } from './icons.jsx'
 import {
   ACTIONS,
+  DEFAULT_PROMPTS,
   DEFAULT_PROVIDER,
   IMPROVE_ID,
   PROVIDERS,
@@ -51,20 +52,20 @@ export default function SettingsDialog({ themePreference, onThemeChange, onClose
       const initial = {
         provider: stored.provider || DEFAULT_PROVIDER,
         providers: providerFields(stored, defaults),
-        prompt: stored.prompt || defaults.prompt,
-        actionPrompts: { ...defaults.actionPrompts, ...stored.actionPrompts },
+        prompt: stored.prompt || DEFAULT_PROMPTS.prompt,
+        actionPrompts: { ...DEFAULT_PROMPTS.actionPrompts, ...stored.actionPrompts },
       }
       setProvider(initial.provider)
       setProviders(initial.providers)
       setPrompt(initial.prompt)
       setActionPrompts(initial.actionPrompts)
       setDefaults(defaults)
-      setSavedJson(JSON.stringify(toStoredSettings(initial, defaults)))
+      setSavedJson(JSON.stringify(toStoredSettings(initial)))
     })
   }, [])
 
   // AI and prompt edits are kept here until Save; the theme applies at once.
-  const draftJson = defaults && JSON.stringify(toStoredSettings({ provider, providers, prompt, actionPrompts }, defaults))
+  const draftJson = defaults && JSON.stringify(toStoredSettings({ provider, providers, prompt, actionPrompts }))
   const dirty = draftJson !== savedJson
 
   useEffect(() => {
@@ -201,7 +202,7 @@ export default function SettingsDialog({ themePreference, onThemeChange, onClose
                 Icon={Icon}
                 tint={tint}
                 value={prompt}
-                defaultValue={defaults?.prompt}
+                defaultValue={DEFAULT_PROMPTS.prompt}
                 onChange={setPrompt}
               />
             ) : (
@@ -212,7 +213,7 @@ export default function SettingsDialog({ themePreference, onThemeChange, onClose
                 Icon={Icon}
                 tint={tint}
                 value={actionPrompts[id] || ''}
-                defaultValue={defaults?.actionPrompts[id]}
+                defaultValue={DEFAULT_PROMPTS.actionPrompts[id]}
                 onChange={(value) => setActionPrompt(id, value)}
               />
             ))}

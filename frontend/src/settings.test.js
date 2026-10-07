@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   ACTIONS,
+  DEFAULT_PROMPTS,
   IMPROVE_ID,
   PROVIDERS,
   SETTINGS_STORAGE_KEY,
@@ -18,8 +19,6 @@ const defaults = {
     openai: { host: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
     anthropic: { host: 'https://api.anthropic.com', model: 'claude-sonnet-5-5' },
   },
-  prompt: 'default improve',
-  actionPrompts: { concise: 'default concise', grammar: 'default grammar' },
 }
 
 describe('ACTIONS', () => {
@@ -27,6 +26,12 @@ describe('ACTIONS', () => {
     const ids = ACTIONS.map((a) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(ids).toContain(IMPROVE_ID)
+  })
+
+  it('gives every action a default prompt', () => {
+    for (const a of ACTIONS) expect(a.prompt.trim()).not.toBe('')
+    expect(DEFAULT_PROMPTS.prompt).toBe(ACTIONS.find((a) => a.id === IMPROVE_ID).prompt)
+    expect(Object.keys(DEFAULT_PROMPTS.actionPrompts)).toEqual(ACTIONS.map((a) => a.id).filter((id) => id !== IMPROVE_ID))
   })
 })
 
@@ -49,10 +54,9 @@ describe('toStoredSettings', () => {
       {
         provider: 'openai',
         providers: { openai: { host: 'h', model: 'm', apiKey: 'k' } },
-        prompt: 'default improve',
-        actionPrompts: { concise: 'my concise', grammar: 'default grammar' },
+        prompt: DEFAULT_PROMPTS.prompt,
+        actionPrompts: { concise: 'my concise', grammar: DEFAULT_PROMPTS.actionPrompts.grammar },
       },
-      defaults,
     )
     expect(stored).toEqual({
       provider: 'openai',
@@ -63,14 +67,13 @@ describe('toStoredSettings', () => {
   })
 
   it('keeps an edited Enter prompt', () => {
-    const stored = toStoredSettings({ provider: 'ollama', providers: {}, prompt: 'mine', actionPrompts: {} }, defaults)
+    const stored = toStoredSettings({ provider: 'ollama', providers: {}, prompt: 'mine', actionPrompts: {} })
     expect(stored.prompt).toBe('mine')
   })
 
   it('treats a blank prompt as "use the default"', () => {
     const stored = toStoredSettings(
       { provider: 'ollama', providers: {}, prompt: '   ', actionPrompts: { concise: '' } },
-      defaults,
     )
     expect(stored.prompt).toBeUndefined()
     expect(stored.actionPrompts).toEqual({})
@@ -105,23 +108,14 @@ describe('activeAIConfig', () => {
 })
 
 describe('resolveActionPrompt', () => {
-  it('uses the Enter prompt for the improve action, or "" for the Go default', async () => {
-    const getDefaults = vi.fn()
-    expect(await resolveActionPrompt(IMPROVE_ID, { prompt: 'mine' }, getDefaults)).toBe('mine')
-    expect(await resolveActionPrompt(IMPROVE_ID, {}, getDefaults)).toBe('')
-    expect(getDefaults).not.toHaveBeenCalled()
+  it('uses the Enter prompt for the improve action, or its default', () => {
+    expect(resolveActionPrompt(IMPROVE_ID, { prompt: 'mine' })).toBe('mine')
+    expect(resolveActionPrompt(IMPROVE_ID, {})).toBe(DEFAULT_PROMPTS.prompt)
   })
 
-  it("uses the user's override without fetching defaults", async () => {
-    const getDefaults = vi.fn()
-    const prompt = await resolveActionPrompt('concise', { actionPrompts: { concise: 'mine' } }, getDefaults)
-    expect(prompt).toBe('mine')
-    expect(getDefaults).not.toHaveBeenCalled()
-  })
-
-  it('falls back to the Go default', async () => {
-    const getDefaults = vi.fn().mockResolvedValue(defaults)
-    expect(await resolveActionPrompt('grammar', {}, getDefaults)).toBe('default grammar')
+  it("uses the user's override, or else the default", () => {
+    expect(resolveActionPrompt('concise', { actionPrompts: { concise: 'mine' } })).toBe('mine')
+    expect(resolveActionPrompt('grammar', {})).toBe(DEFAULT_PROMPTS.actionPrompts.grammar)
   })
 })
 

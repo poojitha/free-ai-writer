@@ -3,7 +3,6 @@ import { Editor } from '@tinymce/tinymce-react'
 import {
   ChooseSavePath,
   ImproveText,
-  GetDefaultSettings,
   OpenDocument,
   WriteDocument,
 } from '../wailsjs/go/main/App'
@@ -23,6 +22,7 @@ import {
 import {
   ACTIONS,
   DEFAULT_SUGGESTION_HEIGHT,
+  IMPROVE_ID,
   SUGGESTION_HEIGHT_STORAGE_KEY,
   activeAIConfig,
   clampSuggestionHeight,
@@ -180,16 +180,14 @@ export default function App() {
   // through a ref to always call the latest version.
   const improveLineRef = useRef(null)
   improveLineRef.current = (target) =>
-    runSuggestion(target, 'Improve writing', (loadStoredSettings() || {}).prompt || '')
+    runSuggestion(target, 'Improve writing', resolveActionPrompt(IMPROVE_ID, loadStoredSettings() || {}))
 
-  const runAction = async (action) => {
+  const runAction = (action) => {
     const editor = editorRef.current
     if (!editor) return
-    // Capture the target before awaiting, while the selection is current.
     const target = getActionTarget(editor)
     if (!target) return
-    const prompt = await resolveActionPrompt(action.id, loadStoredSettings() || {}, GetDefaultSettings)
-    runSuggestion(target, action.label, prompt)
+    runSuggestion(target, action.label, resolveActionPrompt(action.id, loadStoredSettings() || {}))
   }
 
   const applySuggestion = (s) => {

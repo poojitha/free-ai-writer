@@ -25,10 +25,11 @@ export const PROVIDERS = [
   },
 ]
 
+const RETURN_ONLY = ' Return only the rewritten text, with no preamble or explanation.'
+
 // Suggestion bar actions. Each runs on the selection, or on the paragraph the
-// caret is in when nothing is selected. Default prompts come from Go
-// (GetDefaultSettings().actionPrompts, keyed by id); user edits are
-// stored as overrides under ollamaSettings.actionPrompts. The exception is
+// caret is in when nothing is selected, using its default `prompt`; user edits
+// are stored as overrides under ollamaSettings.actionPrompts. The exception is
 // IMPROVE_ID, which shares the Enter-key prompt (ollamaSettings.prompt).
 export const IMPROVE_ID = 'improve'
 export const ACTIONS = [
@@ -37,32 +38,48 @@ export const ACTIONS = [
     label: 'Improve writing',
     Icon: DocIcon,
     tint: 'blue',
+    prompt:
+      'Improve the following text so it is clear and reads smoothly. ' +
+      'Fix grammar, simplify confusing or awkward phrasing, and improve flow, ' +
+      'while keeping the original meaning and voice. Return only the improved ' +
+      'text, with no preamble or explanation.',
   },
   {
     id: 'concise',
     label: 'Make it more concise',
     Icon: WandIcon,
     tint: 'green',
+    prompt: 'Rewrite the following text to be more concise. Remove filler and redundancy but keep every idea.' + RETURN_ONLY,
   },
   {
     id: 'tone',
     label: 'Improve tone',
     Icon: SmileIcon,
     tint: 'amber',
+    prompt: 'Rewrite the following text with a warmer, more natural and engaging tone, keeping its meaning.' + RETURN_ONLY,
   },
   {
     id: 'expand',
     label: 'Expand this idea',
     Icon: BulbIcon,
     tint: 'violet',
+    prompt: 'Expand the following text with more detail, examples, or depth, in the same voice and style.' + RETURN_ONLY,
   },
   {
     id: 'grammar',
     label: 'Fix grammar',
     Icon: ShieldIcon,
     tint: 'red',
+    prompt: 'Fix the grammar, spelling, and punctuation of the following text. Change nothing else.' + RETURN_ONLY,
   },
 ]
+
+// The default prompts, in the shape they're stored in: `prompt` is the
+// Enter-key (and improve action) prompt, `actionPrompts` the others by id.
+export const DEFAULT_PROMPTS = {
+  prompt: ACTIONS.find((a) => a.id === IMPROVE_ID).prompt,
+  actionPrompts: Object.fromEntries(ACTIONS.filter((a) => a.id !== IMPROVE_ID).map((a) => [a.id, a.prompt])),
+}
 
 export function loadStoredSettings() {
   try {
@@ -102,24 +119,23 @@ export function activeAIConfig(stored) {
 
 // What to persist for the Settings dialog's values. Prompts are only kept
 // when the user changed them, so improved defaults still reach everyone else.
-export function toStoredSettings({ provider, providers, prompt, actionPrompts }, defaults) {
+export function toStoredSettings({ provider, providers, prompt, actionPrompts }) {
   const isOverride = (p, def) => p.trim() && p !== def
   return {
     provider,
     providers,
-    prompt: isOverride(prompt, defaults.prompt) ? prompt : undefined,
+    prompt: isOverride(prompt, DEFAULT_PROMPTS.prompt) ? prompt : undefined,
     actionPrompts: Object.fromEntries(
-      Object.entries(actionPrompts).filter(([id, p]) => isOverride(p, defaults.actionPrompts[id])),
+      Object.entries(actionPrompts).filter(([id, p]) => isOverride(p, DEFAULT_PROMPTS.actionPrompts[id])),
     ),
   }
 }
 
-// The prompt to send for an action. The improve action uses the Enter-key
-// prompt, where '' makes ImproveText fall back to the Go default; the others
-// use the user's override or else the Go default (fetched only if needed).
-export async function resolveActionPrompt(actionId, stored, getDefaults) {
-  if (actionId === IMPROVE_ID) return stored.prompt || ''
-  return stored.actionPrompts?.[actionId] || (await getDefaults()).actionPrompts[actionId]
+// The prompt to send for an action: the user's override, else the default.
+// The improve action uses the Enter-key prompt.
+export function resolveActionPrompt(actionId, stored) {
+  if (actionId === IMPROVE_ID) return stored.prompt || DEFAULT_PROMPTS.prompt
+  return stored.actionPrompts?.[actionId] || DEFAULT_PROMPTS.actionPrompts[actionId]
 }
 
 export const SUGGESTION_HEIGHT_STORAGE_KEY = 'suggestionHeight'
