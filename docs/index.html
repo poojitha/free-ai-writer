@@ -3,9 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hush Writer</title>
-  <meta name="description" content="Hush Writer is a distraction-free, AI-assisted writing tool for the desktop. Free for Windows and Mac.">
+  <title>Hush Writer: Free, Private AI Writing App for Windows &amp; Mac</title>
+  <meta name="description" content="A free, distraction-free writing app with AI that runs on your own computer through Ollama, so your writing stays private. Open source, for Windows and Mac.">
+  <link rel="canonical" href="https://poojitha.github.io/hush-writer/">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181b" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/png" href="hush-logo.png">
+  <link rel="apple-touch-icon" href="hush-logo.png">
+
+  <!-- Link previews (LinkedIn, Facebook, Slack, X, …) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Hush Writer">
+  <meta property="og:url" content="https://poojitha.github.io/hush-writer/">
+  <meta property="og:title" content="Hush Writer: Free, Private AI Writing App">
+  <meta property="og:description" content="Write without distractions, with AI that runs on your own computer. Your writing never leaves your machine. Free and open source for Windows and Mac.">
+  <meta property="og:image" content="https://poojitha.github.io/hush-writer/screenshots/ai-suggestions.png">
+  <meta property="og:image:width" content="1758">
+  <meta property="og:image:height" content="1094">
+  <meta property="og:image:alt" content="Hush Writer showing AI suggestions below the editor">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Hush Writer: Free, Private AI Writing App">
+  <meta name="twitter:description" content="Write without distractions, with AI that runs on your own computer. Free and open source for Windows and Mac.">
+  <meta name="twitter:image" content="https://poojitha.github.io/hush-writer/screenshots/ai-suggestions.png">
+
+  <!-- Structured data for search engines -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Hush Writer",
+    "description": "A free, distraction-free writing app with AI suggestions that run on your own computer through Ollama, or optionally ChatGPT, Claude or any OpenAI-compatible API.",
+    "url": "https://poojitha.github.io/hush-writer/",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Writing",
+    "operatingSystem": "Windows 10, Windows 11, macOS",
+    "downloadUrl": "https://github.com/poojitha/hush-writer/releases/latest",
+    "image": "https://poojitha.github.io/hush-writer/hush-logo.png",
+    "screenshot": "https://poojitha.github.io/hush-writer/screenshots/ai-suggestions.png",
+    "license": "https://opensource.org/licenses/MIT",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "poojitha", "url": "https://github.com/poojitha" },
+    "codeRepository": "https://github.com/poojitha/hush-writer"
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
@@ -319,19 +361,32 @@
   <main id="top">
     <header class="hero">
       <div class="wrap">
-        <img src="hush-logo.png" alt="Hush Writer logo">
+        <img src="hush-logo.png" alt="Hush Writer logo" width="160" height="160">
         <h1>Hush Writer</h1>
-        <p class="tagline">A distraction-free, AI-assisted writing tool for the desktop. Just you, your words, and a little help when you ask for it.</p>
+        <p class="tagline">A free, distraction-free writing app with AI that runs privately on your own computer. Just you, your words, and a little help when you ask for it.</p>
         <div class="downloads">
-          <a class="button" href="https://github.com/poojitha/hush-writer/releases/latest/download/hush-writer.exe">
+          <a class="button" id="download-windows" href="https://github.com/poojitha/hush-writer/releases/latest/download/hush-writer.exe">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
             For Windows
           </a>
-          <a class="button secondary" href="https://github.com/poojitha/hush-writer/releases/latest/download/Hush-Writer-macOS.zip">
+          <a class="button secondary" id="download-mac" href="https://github.com/poojitha/hush-writer/releases/latest/download/Hush-Writer-macOS.zip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
             For Mac
           </a>
         </div>
+        <script>
+          // On a Mac, make the Mac download the main (orange) button and put it
+          // first. iPads also report "Mac", but have a touch screen.
+          (function () {
+            var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+            if (!/mac/i.test(platform) || navigator.maxTouchPoints > 1) return;
+            var mac = document.getElementById('download-mac');
+            var win = document.getElementById('download-windows');
+            mac.classList.remove('secondary');
+            win.classList.add('secondary');
+            mac.parentNode.insertBefore(mac, win);
+          })();
+        </script>
         <p class="hero-note">Free · Windows 10 and 11 · macOS (Intel and Apple Silicon) · <a href="https://github.com/poojitha/hush-writer/releases">All releases</a></p>
       </div>
     </header>
@@ -344,16 +399,16 @@
           <div class="slides">
             <div class="track">
               <figure class="shot" aria-roledescription="slide" aria-label="1 of 4" data-caption="A clean page with nothing in your way">
-                <img src="screenshots/editor.png" alt="The Hush Writer editor" width="1756" height="1097">
+                <img src="screenshots/editor.png" alt="The Hush Writer distraction-free editor with a document open" width="1756" height="1097">
               </figure>
               <figure class="shot" aria-roledescription="slide" aria-label="2 of 4" data-caption="AI suggestions, ready to compare and replace">
-                <img src="screenshots/ai-suggestions.png" alt="AI suggestions shown below the editor" width="1758" height="1094">
+                <img src="screenshots/ai-suggestions.png" alt="AI writing suggestions shown below the editor, ready to copy or replace" width="1758" height="1094">
               </figure>
               <figure class="shot" aria-roledescription="slide" aria-label="3 of 4" data-caption="Edit the prompt behind every action">
-                <img src="screenshots/change-prompts.png" alt="Settings dialog for editing AI prompts" width="1755" height="1094">
+                <img src="screenshots/change-prompts.png" alt="Hush Writer settings dialog for editing the AI prompt behind each action" width="1755" height="1094">
               </figure>
               <figure class="shot" aria-roledescription="slide" aria-label="4 of 4" data-caption="Light/Dark mode for day and night writing">
-                <img src="screenshots/dark-mode.png" alt="Hush Writer in dark mode" width="1759" height="1090">
+                <img src="screenshots/dark-mode.png" alt="Hush Writer writing app in dark mode" width="1759" height="1090">
               </figure>
             </div>
           </div>
